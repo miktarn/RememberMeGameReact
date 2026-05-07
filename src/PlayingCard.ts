@@ -37,4 +37,8 @@ export class PlayingCard {
     toString(): string {
         return `${this.value}${this.suit}`;
     }
+
+    isRed(): Boolean {
+        return this.suit === CardSuit.Heart || this.suit === CardSuit.Diamonds;
+    }
 }

@@ -1,5 +1,5 @@
 import {JSX, useState} from 'react';
-import  { PlayingCard,CardSuit, CardValue} from "./PlayingCard";
+import {PlayingCard, CardSuit, CardValue} from "./PlayingCard";
 
 export default function Game(): JSX.Element {
     const [score, setScore] = useState(0);
@@ -33,8 +33,7 @@ interface BoardProps {
     isMatchingBySuit: Boolean;
 }
 
-function Board({addScore, isMatchingBySuit} : BoardProps): JSX.Element {
-    const [cards, setCards] = useState<PlayingCard[]>(cardsInitialState);
+function Board({addScore, isMatchingBySuit}: BoardProps): JSX.Element {
     const [isFlipped, setIsFlipped] = useState(Array());
     const [isRemoved, setIsRemoved] = useState(Array());
     const [isLocked, setIsLocked] = useState(false);
@@ -50,7 +49,7 @@ function Board({addScore, isMatchingBySuit} : BoardProps): JSX.Element {
                 setIsFlipped(Array())
                 setIsLocked(false)
             }, revealTimeout);
-        } else if (!isMatchingBySuit && firstCard.isMatchingValue(secondCard)){
+        } else if (!isMatchingBySuit && firstCard.isMatchingValue(secondCard)) {
             addScore(2);
             setTimeout(() => {
                 setIsRemoved([...isRemoved, ...updatedFlipped]);
@@ -66,11 +65,12 @@ function Board({addScore, isMatchingBySuit} : BoardProps): JSX.Element {
     }
 
     function handleClick(index: number) {
-        if (isLocked) {return;}
+        if (isLocked) {
+            return;
+        }
         const updatedFlipped = [...isFlipped, index];
         setIsFlipped(updatedFlipped);
 
-        console.log("You chose " + cards[index].toString() + ", amount of flipped is " + updatedFlipped.length)
         if (updatedFlipped.length === 2) {
             setIsLocked(true)
             checkIfMatching(updatedFlipped);
@@ -111,7 +111,6 @@ function Board({addScore, isMatchingBySuit} : BoardProps): JSX.Element {
 }
 
 
-
 interface CardProps {
     onClick: () => void,
     isFlipped: Boolean,
@@ -121,16 +120,21 @@ interface CardProps {
 
 function Card({isFlipped, isRemoved, card, onClick}: CardProps): JSX.Element {
     if (isRemoved) {
-        return <div className="card" />
+        return <div className="card"/>
     }
-    return (
-        <button className="card" onClick={onClick}>
-            {isFlipped ? card.toString() : "***"}
-        </button>
-    );
+    if (!isFlipped) {
+        return <button className="card" onClick={onClick}>***</button>;
+    }
+
+    const colorClass = card.isRed() ? "darkred-font-color" : "black-font-color";
+    return (<button className="card">
+        <div className={`${colorClass}`}>
+            {card.toString()}
+        </div>
+    </button>);
 }
 
-const cardsInitialState: PlayingCard[] = [
+const cards: PlayingCard[] = [
     new PlayingCard(CardSuit.Spades, CardValue.Two),
     new PlayingCard(CardSuit.Heart, CardValue.Two),
     new PlayingCard(CardSuit.Spades, CardValue.Ace),
@@ -143,4 +147,4 @@ const cardsInitialState: PlayingCard[] = [
     new PlayingCard(CardSuit.Heart, CardValue.Nine),
     new PlayingCard(CardSuit.Spades, CardValue.Ten),
     new PlayingCard(CardSuit.Heart, CardValue.Ten),
-];
+].sort(() => Math.random() - 0.5);

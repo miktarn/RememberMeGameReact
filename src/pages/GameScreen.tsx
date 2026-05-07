@@ -1,7 +1,7 @@
 import {JSX, useState} from 'react';
-import {PlayingCard, CardSuit, CardValue} from "./PlayingCard";
+import {PlayingCard, CardSuit, CardValue} from "../model/PlayingCard";
 
-export default function Game(): JSX.Element {
+export default function GameScreen(): JSX.Element {
     const [score, setScore] = useState(0);
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
 
@@ -113,8 +113,8 @@ function Board({addScore, isMatchingBySuit}: BoardProps): JSX.Element {
 
 interface CardProps {
     onClick: () => void,
-    isFlipped: Boolean,
-    isRemoved: Boolean,
+    isFlipped: boolean,
+    isRemoved: boolean,
     card: PlayingCard;
 }
 

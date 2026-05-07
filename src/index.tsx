@@ -1,14 +1,28 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { createBrowserRouter, RouterProvider} from "react-router-dom";
 // @ts-ignore
 import "./styles.css";
 
-import App from "./App";
+import GameScreen from "./pages/GameScreen";
+import HomePage from "./pages/HomePage";
 
 const root = createRoot(document.getElementById("root") as HTMLElement);
 
+const router = createBrowserRouter([
+    {
+        path: '/',
+        element: <HomePage />
+    },
+    {
+        path: '/game',
+        element: <GameScreen />
+    }
+]);
+
+
 root.render(
     <StrictMode>
-        <App />
+        <RouterProvider router={router} />
     </StrictMode>
 );

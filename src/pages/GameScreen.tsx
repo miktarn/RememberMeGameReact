@@ -1,5 +1,6 @@
 import {JSX, useState} from 'react';
 import {PlayingCard, CardSuit, CardValue} from "../model/PlayingCard";
+import {Link} from "react-router-dom";
 
 export default function GameScreen(): JSX.Element {
     const [score, setScore] = useState(0);
@@ -11,6 +12,7 @@ export default function GameScreen(): JSX.Element {
 
     return (
         <div className="game">
+
             <div className="board">
                 <Board addScore={addScore} isMatchingBySuit={isMatchingBySuit}/>
             </div>
@@ -21,6 +23,9 @@ export default function GameScreen(): JSX.Element {
                 <button className="change-matching-rule" onClick={() => setIsMatchingBySuit(!isMatchingBySuit)}>
                     {isMatchingBySuit ? "Change to match by value" : "Change to match by suit"}
                 </button>
+            </div>
+            <div>
+                <Link to="/"><button className="not-important-button">Leave the game</button></Link>
             </div>
         </div>
     );

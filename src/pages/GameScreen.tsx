@@ -3,6 +3,7 @@ import {PlayingCard, CardSuit, CardValue} from "../model/PlayingCard";
 import {Link} from "react-router-dom";
 
 export default function GameScreen(): JSX.Element {
+    const [userName] = useState(localStorage.getItem("username"))
     const [score, setScore] = useState(0);
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
 
@@ -17,6 +18,9 @@ export default function GameScreen(): JSX.Element {
                 <Board addScore={addScore} isMatchingBySuit={isMatchingBySuit}/>
             </div>
             <div className="game-info">
+                <div className="status">
+                   Player 1: <span className="score">{userName}</span>
+                </div>
                 <div className="status">
                     Your score is <span className="score">{score}</span>
                 </div>

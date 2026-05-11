@@ -59,8 +59,8 @@ h1, h2, h3, h4, h5, h6 {
     border: 2px solid var(--border);
     border-radius: 14px;
 
+    color: var(--accent-hover);
     background: white;
-
     display: flex;
     align-items: center;
     justify-content: center;
@@ -79,8 +79,6 @@ h1, h2, h3, h4, h5, h6 {
 .card:hover {
     transform: translateY(-4px);
     box-shadow: 0 10px 20px rgba(79, 70, 229, 0.15);
-    color: var(--accent-hover);
-    background: white;
 }
 
 .card:active {

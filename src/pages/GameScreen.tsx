@@ -2,19 +2,19 @@ import {JSX, useState} from 'react';
 import {PlayingCard, CardSuit, CardValue} from "../model/PlayingCard";
 import {Link, useNavigate} from "react-router-dom";
 import {deck} from "../model/PlayingCard";
+import { doc, getDoc } from "firebase/firestore";
+import {db} from "../config/firebase.js"
+import {GameState} from "../model/GameState";
 
 const CURRENT_GAME = "current_game";
 
 export default function GameScreen(): JSX.Element {
     const navigate = useNavigate();
-
     const [userName] = useState(localStorage.getItem("username"))
-    const [score, setScore] = useState(0);
+    const [gameState, setGameState] = useState(initialGameState);
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
 
-    function addScore(points: number) {
-        setScore(score + points);
-    }
+
 
     function handleLeave() {
         localStorage.removeItem(CURRENT_GAME)
@@ -25,14 +25,14 @@ export default function GameScreen(): JSX.Element {
         <div className="game">
 
             <div className="board">
-                <Board addScore={addScore} isMatchingBySuit={isMatchingBySuit}/>
+                <Board gameState={gameState} setGameState={setGameState} isMatchingBySuit={isMatchingBySuit}/>
             </div>
             <div className="game-info">
                 <div className="status">
                    Player 1: <span className="score">{userName}</span>
                 </div>
                 <div className="status">
-                    Your score is <span className="score">{score}</span>
+                    Your score is <span className="score">{gameState.score}</span>
                 </div>
                 <button className="change-matching-rule" onClick={() => setIsMatchingBySuit(!isMatchingBySuit)}>
                     {isMatchingBySuit ? "Change to match by value" : "Change to match by suit"}
@@ -48,35 +48,36 @@ export default function GameScreen(): JSX.Element {
 const revealTimeout = 700;
 
 interface BoardProps {
-    addScore: (points: number) => void,
+    gameState: GameState,
+    setGameState: (points: GameState) => void,
     isMatchingBySuit: Boolean;
 }
 
-function Board({addScore, isMatchingBySuit}: BoardProps): JSX.Element {
+function Board({gameState, setGameState, isMatchingBySuit}: BoardProps): JSX.Element {
     const [isFlipped, setIsFlipped] = useState<number[]>(Array());
-    const [isRemoved, setIsRemoved] = useState<number[]>(Array());
     const [isLocked, setIsLocked] = useState(false);
 
+    function processMatch(updatedFlipped: number[], pointsGained: number) {
+        const nextScore = gameState.score + pointsGained;
+        setGameState({...gameState, score: nextScore});
+        setTimeout(() => {
+            const nextRemovedCards = [...gameState.removedCards, updatedFlipped[0], updatedFlipped[1]]
+            setGameState({...gameState, removedCards: nextRemovedCards, score: nextScore});
+            setIsFlipped(Array())
+            setIsLocked(false)
+        }, revealTimeout);
+    }
+
     function checkIfMatching(updatedFlipped: number[]) {
-        const firstCard : PlayingCard = deck[cardLayoutIndexes[updatedFlipped[0]]];
-        const secondCard : PlayingCard = deck[cardLayoutIndexes[updatedFlipped[1]]];
+        const firstCard : PlayingCard = deck[gameState.cardsLayout[updatedFlipped[0]]];
+        const secondCard : PlayingCard = deck[gameState.cardsLayout[updatedFlipped[1]]];
 
         console.log("First " + firstCard)
         console.log("Second " + secondCard)
         if (isMatchingBySuit && firstCard.isMatchingSuit(secondCard)) {
-            addScore(1);
-            setTimeout(() => {
-                setIsRemoved([...isRemoved, ...updatedFlipped]);
-                setIsFlipped(Array())
-                setIsLocked(false)
-            }, revealTimeout);
+            processMatch(updatedFlipped, 1);
         } else if (!isMatchingBySuit && firstCard.isMatchingValue(secondCard)) {
-            addScore(2);
-            setTimeout(() => {
-                setIsRemoved([...isRemoved, ...updatedFlipped]);
-                setIsFlipped(Array())
-                setIsLocked(false)
-            }, revealTimeout);
+            processMatch(updatedFlipped, 2);
         } else {
             setTimeout(() => {
                 setIsFlipped(Array());
@@ -100,9 +101,9 @@ function Board({addScore, isMatchingBySuit}: BoardProps): JSX.Element {
 
     function buildCardProps(index: number): CardProps {
         return {
-            card: deck[cardLayoutIndexes[index]],
+            card: deck[gameState.cardsLayout[index]],
             isFlipped: isFlipped.includes(index),
-            isRemoved: isRemoved.includes(index),
+            isRemoved: gameState.removedCards.includes(index),
             onClick: () => handleClick(index),
         };
     }
@@ -155,6 +156,10 @@ function Card({isFlipped, isRemoved, card, onClick}: CardProps): JSX.Element {
     </button>);
 }
 
-const cardLayoutIndexes: number[] = [
-   0,1,2,3,4,5,13,14,15,16,17,18
-].sort(() => Math.random() - 0.5);
+const initialGameState: GameState = {
+    score: 0,
+    cardsLayout: [
+        0,1,2,3,4,5,13,14,15,16,17,18
+    ].sort(() => Math.random() - 0.5),
+    removedCards: []
+};

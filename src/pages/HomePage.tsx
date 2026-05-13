@@ -33,3 +33,11 @@ export default function HomePage(): JSX.Element {
         </form>
     </div>
 }
+
+const saveNewGameAndRedirect = async (gameState: GameState) => {
+    try {
+
+    } catch (e) {
+        console.error("Error adding document: ", e);
+    }
+};

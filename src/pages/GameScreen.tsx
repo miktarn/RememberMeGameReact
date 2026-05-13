@@ -1,14 +1,24 @@
 import {JSX, useState} from 'react';
 import {PlayingCard, CardSuit, CardValue} from "../model/PlayingCard";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
+import {deck} from "../model/PlayingCard";
+
+const CURRENT_GAME = "current_game";
 
 export default function GameScreen(): JSX.Element {
+    const navigate = useNavigate();
+
     const [userName] = useState(localStorage.getItem("username"))
     const [score, setScore] = useState(0);
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
 
     function addScore(points: number) {
         setScore(score + points);
+    }
+
+    function handleLeave() {
+        localStorage.removeItem(CURRENT_GAME)
+        navigate("/")
     }
 
     return (
@@ -29,7 +39,7 @@ export default function GameScreen(): JSX.Element {
                 </button>
             </div>
             <div>
-                <Link to="/"><button className="not-important-button">Leave the game</button></Link>
+                <button className="not-important-button" onClick={handleLeave}>Leave the game</button>
             </div>
         </div>
     );
@@ -43,14 +53,16 @@ interface BoardProps {
 }
 
 function Board({addScore, isMatchingBySuit}: BoardProps): JSX.Element {
-    const [isFlipped, setIsFlipped] = useState(Array());
-    const [isRemoved, setIsRemoved] = useState(Array());
+    const [isFlipped, setIsFlipped] = useState<number[]>(Array());
+    const [isRemoved, setIsRemoved] = useState<number[]>(Array());
     const [isLocked, setIsLocked] = useState(false);
 
-    function checkIfMatching(updatedFlipped: any[]) {
-        const firstCard = cards[updatedFlipped[0]];
-        const secondCard = cards[updatedFlipped[1]];
+    function checkIfMatching(updatedFlipped: number[]) {
+        const firstCard : PlayingCard = deck[cardLayoutIndexes[updatedFlipped[0]]];
+        const secondCard : PlayingCard = deck[cardLayoutIndexes[updatedFlipped[1]]];
 
+        console.log("First " + firstCard)
+        console.log("Second " + secondCard)
         if (isMatchingBySuit && firstCard.isMatchingSuit(secondCard)) {
             addScore(1);
             setTimeout(() => {
@@ -88,7 +100,7 @@ function Board({addScore, isMatchingBySuit}: BoardProps): JSX.Element {
 
     function buildCardProps(index: number): CardProps {
         return {
-            card: cards[index],
+            card: deck[cardLayoutIndexes[index]],
             isFlipped: isFlipped.includes(index),
             isRemoved: isRemoved.includes(index),
             onClick: () => handleClick(index),
@@ -143,17 +155,6 @@ function Card({isFlipped, isRemoved, card, onClick}: CardProps): JSX.Element {
     </button>);
 }
 
-const cards: PlayingCard[] = [
-    new PlayingCard(CardSuit.Spades, CardValue.Two),
-    new PlayingCard(CardSuit.Heart, CardValue.Two),
-    new PlayingCard(CardSuit.Spades, CardValue.Ace),
-    new PlayingCard(CardSuit.Heart, CardValue.Ace),
-    new PlayingCard(CardSuit.Spades, CardValue.King),
-    new PlayingCard(CardSuit.Heart, CardValue.King),
-    new PlayingCard(CardSuit.Spades, CardValue.Queen),
-    new PlayingCard(CardSuit.Heart, CardValue.Queen),
-    new PlayingCard(CardSuit.Spades, CardValue.Nine),
-    new PlayingCard(CardSuit.Heart, CardValue.Nine),
-    new PlayingCard(CardSuit.Spades, CardValue.Ten),
-    new PlayingCard(CardSuit.Heart, CardValue.Ten),
+const cardLayoutIndexes: number[] = [
+   0,1,2,3,4,5,13,14,15,16,17,18
 ].sort(() => Math.random() - 0.5);

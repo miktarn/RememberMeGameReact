@@ -7,10 +7,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "firebase": "^12.13.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "react-router-dom": "^7.15.0",
-    "react-hook-form": "^7.75.0"
+    "react-hook-form": "^7.75.0",
+    "react-router-dom": "^7.15.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

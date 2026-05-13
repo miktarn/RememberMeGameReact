@@ -42,3 +42,7 @@ export class PlayingCard {
         return this.suit === CardSuit.Heart || this.suit === CardSuit.Diamonds;
     }
 }
+
+export const deck: PlayingCard[] = Object.values(CardSuit).flatMap((suit) =>
+    Object.values(CardValue).map((value) => new PlayingCard(suit, value))
+);

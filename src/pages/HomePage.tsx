@@ -4,12 +4,11 @@ import {SubmitHandler, useForm} from "react-hook-form";
 import {db} from "../config/firebase.js"
 import { collection, addDoc } from "firebase/firestore";
 import {GameState} from "../model/GameState";
+import {COLLECTION_PATH, CURRENT_GAME} from "../model/CommonUtil";
+
 type FormData = {
     nickname: string
 }
-
-const CURRENT_GAME = "current_game";
-
 
 export default function HomePage(): JSX.Element {
     const navigate = useNavigate();
@@ -17,9 +16,14 @@ export default function HomePage(): JSX.Element {
     const {register, handleSubmit, formState: {errors}} = useForm<FormData>();
 
     const onSubmit: SubmitHandler<FormData> = async (data) => {
-        localStorage.setItem("username", data.nickname)
-        const newGameUuid: string = crypto.randomUUID();
-        localStorage.setItem(CURRENT_GAME, newGameUuid)
+        const newGameState: GameState = {
+            score: 0,
+            cardsLayout: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11],
+            removedCards: [],
+            playerNames: [data.nickname]
+        };
+        const docRef = await addDoc(collection(db, COLLECTION_PATH), newGameState);
+        localStorage.setItem(CURRENT_GAME, docRef.id)
         navigate("/game")
     }
 
@@ -33,11 +37,3 @@ export default function HomePage(): JSX.Element {
         </form>
     </div>
 }
-
-const saveNewGameAndRedirect = async (gameState: GameState) => {
-    try {
-
-    } catch (e) {
-        console.error("Error adding document: ", e);
-    }
-};

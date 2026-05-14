@@ -1,24 +1,44 @@
-import {JSX, useState} from 'react';
-import {PlayingCard, CardSuit, CardValue} from "../model/PlayingCard";
-import {Link, useNavigate} from "react-router-dom";
+import {JSX, useEffect, useState} from 'react';
+import {PlayingCard} from "../model/PlayingCard";
+import {useNavigate} from "react-router-dom";
 import {deck} from "../model/PlayingCard";
-import { doc, getDoc } from "firebase/firestore";
+import {doc, onSnapshot, setDoc} from "firebase/firestore";
 import {db} from "../config/firebase.js"
 import {GameState} from "../model/GameState";
-
-const CURRENT_GAME = "current_game";
+import {COLLECTION_PATH, CURRENT_GAME} from "../model/CommonUtil";
 
 export default function GameScreen(): JSX.Element {
     const navigate = useNavigate();
-    const [userName] = useState(localStorage.getItem("username"))
-    const [gameState, setGameState] = useState(initialGameState);
+    const [gameState, setGameState] = useState<GameState | undefined | null>();
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
 
+    useEffect(() => {
+        const gameId = localStorage.getItem(CURRENT_GAME) as string;
+        const docRef = doc(db, COLLECTION_PATH, gameId);
 
+        const unsubscribe = onSnapshot(docRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                setGameState(docSnapshot.data() as GameState);
+            } else {
+                console.log("Game is not founded by id! " + gameId);
+                setGameState(undefined);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     function handleLeave() {
         localStorage.removeItem(CURRENT_GAME)
         navigate("/")
+    }
+
+    if (gameState === undefined) {
+        return <div>Game is loading...</div>;
+    }
+
+    if (gameState === null) {
+        return <div>Error during game info fetching...</div>;
     }
 
     return (
@@ -28,9 +48,11 @@ export default function GameScreen(): JSX.Element {
                 <Board gameState={gameState} setGameState={setGameState} isMatchingBySuit={isMatchingBySuit}/>
             </div>
             <div className="game-info">
-                <div className="status">
-                   Player 1: <span className="score">{userName}</span>
-                </div>
+                {gameState.playerNames.map((name, index) => (
+                    <div key={index} className="status">
+                        Player {index + 1}: <span className="score">{name}</span>
+                    </div>
+                ))}
                 <div className="status">
                     Your score is <span className="score">{gameState.score}</span>
                 </div>
@@ -46,6 +68,7 @@ export default function GameScreen(): JSX.Element {
 }
 
 const revealTimeout = 700;
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 interface BoardProps {
     gameState: GameState,
@@ -53,34 +76,37 @@ interface BoardProps {
     isMatchingBySuit: Boolean;
 }
 
-function Board({gameState, setGameState, isMatchingBySuit}: BoardProps): JSX.Element {
-    const [isFlipped, setIsFlipped] = useState<number[]>(Array());
+function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
+    const [flipped, setFlipped] = useState<number[]>(Array());
     const [isLocked, setIsLocked] = useState(false);
 
-    function processMatch(updatedFlipped: number[], pointsGained: number) {
-        const nextScore = gameState.score + pointsGained;
-        setGameState({...gameState, score: nextScore});
-        setTimeout(() => {
+    async function processMatch(updatedFlipped: number[], pointsGained: number) {
+        try {
+            const nextScore = gameState.score + pointsGained;
+            const docRef = doc(db, COLLECTION_PATH, localStorage.getItem(CURRENT_GAME) as string);
+            await setDoc(docRef, {...gameState, score: nextScore})
+            await delay(700)
             const nextRemovedCards = [...gameState.removedCards, updatedFlipped[0], updatedFlipped[1]]
-            setGameState({...gameState, removedCards: nextRemovedCards, score: nextScore});
-            setIsFlipped(Array())
+            await setDoc(docRef, {...gameState, removedCards: nextRemovedCards, score: nextScore})
+            setFlipped(Array())
             setIsLocked(false)
-        }, revealTimeout);
+        } catch (error) {
+            console.error("Error during save to Firebase:", error);
+            setIsLocked(false);
+        }
     }
 
     function checkIfMatching(updatedFlipped: number[]) {
-        const firstCard : PlayingCard = deck[gameState.cardsLayout[updatedFlipped[0]]];
-        const secondCard : PlayingCard = deck[gameState.cardsLayout[updatedFlipped[1]]];
+        const firstCard: PlayingCard = deck[gameState.cardsLayout[updatedFlipped[0]]];
+        const secondCard: PlayingCard = deck[gameState.cardsLayout[updatedFlipped[1]]];
 
-        console.log("First " + firstCard)
-        console.log("Second " + secondCard)
         if (isMatchingBySuit && firstCard.isMatchingSuit(secondCard)) {
             processMatch(updatedFlipped, 1);
         } else if (!isMatchingBySuit && firstCard.isMatchingValue(secondCard)) {
             processMatch(updatedFlipped, 2);
         } else {
             setTimeout(() => {
-                setIsFlipped(Array());
+                setFlipped(Array());
                 setIsLocked(false)
             }, revealTimeout);
         }
@@ -90,8 +116,8 @@ function Board({gameState, setGameState, isMatchingBySuit}: BoardProps): JSX.Ele
         if (isLocked) {
             return;
         }
-        const updatedFlipped = [...isFlipped, index];
-        setIsFlipped(updatedFlipped);
+        const updatedFlipped = [...flipped, index];
+        setFlipped(updatedFlipped);
 
         if (updatedFlipped.length === 2) {
             setIsLocked(true)
@@ -102,7 +128,7 @@ function Board({gameState, setGameState, isMatchingBySuit}: BoardProps): JSX.Ele
     function buildCardProps(index: number): CardProps {
         return {
             card: deck[gameState.cardsLayout[index]],
-            isFlipped: isFlipped.includes(index),
+            isFlipped: flipped.includes(index),
             isRemoved: gameState.removedCards.includes(index),
             onClick: () => handleClick(index),
         };
@@ -155,11 +181,3 @@ function Card({isFlipped, isRemoved, card, onClick}: CardProps): JSX.Element {
         </div>
     </button>);
 }
-
-const initialGameState: GameState = {
-    score: 0,
-    cardsLayout: [
-        0,1,2,3,4,5,13,14,15,16,17,18
-    ].sort(() => Math.random() - 0.5),
-    removedCards: []
-};

@@ -2,20 +2,24 @@ import {JSX, useEffect, useState} from 'react';
 import {PlayingCard} from "../model/PlayingCard";
 import {useNavigate} from "react-router-dom";
 import {deck} from "../model/PlayingCard";
-import {doc, onSnapshot, setDoc} from "firebase/firestore";
+import {doc, onSnapshot, setDoc, DocumentReference} from "firebase/firestore";
 import {db} from "../config/firebase.js"
 import {GameState, increasePoints} from "../model/GameState";
 import {COLLECTION_PATH,NICKNAME, CURRENT_GAME} from "../model/CommonUtil";
+
+let gameId: string;
+let docRef: DocumentReference;
+let playerNickname: string
 
 export default function GameScreen(): JSX.Element {
     const navigate = useNavigate();
     const [gameState, setGameState] = useState<GameState | undefined | null>();
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
-    const playerNickname = localStorage.getItem(NICKNAME) as string;
 
     useEffect(() => {
-        const gameId = localStorage.getItem(CURRENT_GAME) as string;
-        const docRef = doc(db, COLLECTION_PATH, gameId);
+        gameId = localStorage.getItem(CURRENT_GAME) as string;
+        playerNickname = localStorage.getItem(NICKNAME) as string;
+        docRef = doc(db, COLLECTION_PATH, gameId);
         const unsubscribe = onSnapshot(docRef, (docSnapshot) => {
             if (docSnapshot.exists()) {
                 setGameState(docSnapshot.data() as GameState);
@@ -37,11 +41,12 @@ export default function GameScreen(): JSX.Element {
     }
 
     async function handleLeave() {
-        const gameId = localStorage.getItem(CURRENT_GAME) as string;
         const nextPlayers = (gameState as GameState).playerScore.filter(p => p.name !== playerNickname);
+        console.log("Players amount " + nextPlayers.length)
         const docRef = doc(db, COLLECTION_PATH, gameId);
-        await setDoc(docRef, {...gameState, playerNames: nextPlayers})
+        await setDoc(docRef, {...gameState, playerScore: nextPlayers})
         localStorage.removeItem(CURRENT_GAME)
+        localStorage.removeItem(NICKNAME)
         navigate("/")
     }
 
@@ -52,6 +57,7 @@ export default function GameScreen(): JSX.Element {
                 <Board gameState={gameState} setGameState={setGameState} isMatchingBySuit={isMatchingBySuit}/>
             </div>
             <div className="game-info">
+                <div>Current room: {gameId}</div><br/>
                 {gameState.playerScore.map((player) => (
                     <div  className="status" key={player.name}>{player.name}: {player.score}</div>
                 ))}
@@ -81,9 +87,7 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
 
     async function processMatch(updatedFlipped: number[], pointsGained: number) {
         try {
-            const playerNickname = localStorage.getItem(NICKNAME) as string;
             const nextPlayerScore = increasePoints(gameState.playerScore, playerNickname, pointsGained);
-            const docRef = doc(db, COLLECTION_PATH, localStorage.getItem(CURRENT_GAME) as string);
             await setDoc(docRef, {...gameState, playerScore: nextPlayerScore})
             await delay(700)
             const nextRemovedCards = [...gameState.removedCards, updatedFlipped[0], updatedFlipped[1]]

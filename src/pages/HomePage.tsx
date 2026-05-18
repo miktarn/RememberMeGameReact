@@ -31,7 +31,7 @@ export default function HomePage(): JSX.Element {
             </>
             :
             <>
-                <button onClick={() => setIsJoinGameFormActive(!isJoinGameFormActive)} >Join</button>
+                <button onClick={() => setIsJoinGameFormActive(!isJoinGameFormActive)}>Join</button>
                 <button className={"grey-button"}>Create</button>
                 <CreateNewGameForm/>
             </>
@@ -73,24 +73,30 @@ function CreateNewGameForm(): JSX.Element {
 
 function JoinNewGameForm(): JSX.Element {
     const navigate = useNavigate();
-    const {register, handleSubmit, formState: {errors}} = useForm<JoinGameFormData>();
+    const {register, handleSubmit, formState: {errors}, setError} = useForm<JoinGameFormData>();
 
     const onSubmit: SubmitHandler<JoinGameFormData> = async (data) => {
         const docRef = doc(db, COLLECTION_PATH, data.gameId);
         const docSnapshot = await getDoc(docRef);
 
-        if (docSnapshot.exists()) {
-            const gameState: GameState = docSnapshot.data() as GameState;
-
-            const playerScore = gameState.playerScore;
-            const nextPlayerScore = [...playerScore, {name: data.nickname, score: 0}]
-            await setDoc(docRef, {...gameState, playerScore: nextPlayerScore});
-            localStorage.setItem(CURRENT_GAME, docRef.id)
-            navigate("/game")
-        } else {
-            console.log("Game room not found");
+        if (!docSnapshot.exists()) {
+            setError("gameId", {message: "Game room not found"})
             return null;
         }
+
+        const gameState: GameState = docSnapshot.data() as GameState;
+        if (gameState.playerScore.find(p => p.name === data.nickname)) {
+            setError("nickname", {message: "Nickname already taken"})
+            return null;
+        }
+
+        const playerScore = gameState.playerScore;
+        const nextPlayerScore = [...playerScore, {name: data.nickname, score: 0}]
+        await setDoc(docRef, {...gameState, playerScore: nextPlayerScore});
+        localStorage.setItem(CURRENT_GAME, docRef.id)
+        localStorage.setItem(NICKNAME, data.nickname)
+
+        navigate("/game")
     }
 
     return <form onSubmit={handleSubmit(onSubmit)}>
@@ -100,7 +106,6 @@ function JoinNewGameForm(): JSX.Element {
         {errors.gameId && <>
             <div style={{color: "red"}}>{errors.gameId.message}</div>
             <br/></>}
-
         <input {...register("nickname", {required: "Username should not be empty"})} type="text"
                placeholder="Enter your nickname"></input><br/><br/>
         {errors.nickname && <>

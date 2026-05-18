@@ -4,18 +4,18 @@ import {useNavigate} from "react-router-dom";
 import {deck} from "../model/PlayingCard";
 import {doc, onSnapshot, setDoc} from "firebase/firestore";
 import {db} from "../config/firebase.js"
-import {GameState} from "../model/GameState";
-import {COLLECTION_PATH, CURRENT_GAME} from "../model/CommonUtil";
+import {GameState, increasePoints} from "../model/GameState";
+import {COLLECTION_PATH,NICKNAME, CURRENT_GAME} from "../model/CommonUtil";
 
 export default function GameScreen(): JSX.Element {
     const navigate = useNavigate();
     const [gameState, setGameState] = useState<GameState | undefined | null>();
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
+    const playerNickname = localStorage.getItem(NICKNAME) as string;
 
     useEffect(() => {
         const gameId = localStorage.getItem(CURRENT_GAME) as string;
         const docRef = doc(db, COLLECTION_PATH, gameId);
-
         const unsubscribe = onSnapshot(docRef, (docSnapshot) => {
             if (docSnapshot.exists()) {
                 setGameState(docSnapshot.data() as GameState);
@@ -28,17 +28,21 @@ export default function GameScreen(): JSX.Element {
         return () => unsubscribe();
     }, []);
 
-    function handleLeave() {
-        localStorage.removeItem(CURRENT_GAME)
-        navigate("/")
-    }
-
     if (gameState === undefined) {
         return <div>Game is loading...</div>;
     }
 
     if (gameState === null) {
         return <div>Error during game info fetching...</div>;
+    }
+
+    async function handleLeave() {
+        const gameId = localStorage.getItem(CURRENT_GAME) as string;
+        const nextPlayers = (gameState as GameState).playerScore.filter(p => p.name !== playerNickname);
+        const docRef = doc(db, COLLECTION_PATH, gameId);
+        await setDoc(docRef, {...gameState, playerNames: nextPlayers})
+        localStorage.removeItem(CURRENT_GAME)
+        navigate("/")
     }
 
     return (
@@ -48,14 +52,9 @@ export default function GameScreen(): JSX.Element {
                 <Board gameState={gameState} setGameState={setGameState} isMatchingBySuit={isMatchingBySuit}/>
             </div>
             <div className="game-info">
-                {gameState.playerNames.map((name, index) => (
-                    <div key={index} className="status">
-                        Player {index + 1}: <span className="score">{name}</span>
-                    </div>
+                {gameState.playerScore.map((player) => (
+                    <div  className="status" key={player.name}>{player.name}: {player.score}</div>
                 ))}
-                <div className="status">
-                    Your score is <span className="score">{gameState.score}</span>
-                </div>
                 <button className="change-matching-rule" onClick={() => setIsMatchingBySuit(!isMatchingBySuit)}>
                     {isMatchingBySuit ? "Change to match by value" : "Change to match by suit"}
                 </button>
@@ -82,12 +81,13 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
 
     async function processMatch(updatedFlipped: number[], pointsGained: number) {
         try {
-            const nextScore = gameState.score + pointsGained;
+            const playerNickname = localStorage.getItem(NICKNAME) as string;
+            const nextPlayerScore = increasePoints(gameState.playerScore, playerNickname, pointsGained);
             const docRef = doc(db, COLLECTION_PATH, localStorage.getItem(CURRENT_GAME) as string);
-            await setDoc(docRef, {...gameState, score: nextScore})
+            await setDoc(docRef, {...gameState, playerScore: nextPlayerScore})
             await delay(700)
             const nextRemovedCards = [...gameState.removedCards, updatedFlipped[0], updatedFlipped[1]]
-            await setDoc(docRef, {...gameState, removedCards: nextRemovedCards, score: nextScore})
+            await setDoc(docRef, {...gameState, removedCards: nextRemovedCards, playerScore: nextPlayerScore})
             setFlipped(Array())
             setIsLocked(false)
         } catch (error) {

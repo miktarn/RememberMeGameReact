@@ -49,7 +49,8 @@ function CreateNewGameForm(): JSX.Element {
                 Math.floor(Math.random() * 52)
             ),
             removedCards: [],
-            playerScore: [{name: data.nickname, score: 0}]
+            playerScore: [{name: data.nickname, score: 0}],
+            activePlayerName: data.nickname
         };
 
         console.log("Game state " + newGameState)

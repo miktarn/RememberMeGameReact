@@ -2,10 +2,10 @@ import {JSX, useEffect, useState} from 'react';
 import {PlayingCard} from "../model/PlayingCard";
 import {useNavigate} from "react-router-dom";
 import {deck} from "../model/PlayingCard";
-import {doc, onSnapshot, setDoc, DocumentReference} from "firebase/firestore";
+import {doc, onSnapshot, setDoc, DocumentReference, deleteDoc} from "firebase/firestore";
 import {db} from "../config/firebase.js"
-import {GameState, increasePoints} from "../model/GameState";
-import {COLLECTION_PATH,NICKNAME, CURRENT_GAME} from "../model/CommonUtil";
+import {GameState, getNextActivePlayerName, increasePoints} from "../model/GameState";
+import {COLLECTION_PATH, NICKNAME, CURRENT_GAME} from "../model/CommonUtil";
 
 let gameId: string;
 let docRef: DocumentReference;
@@ -42,9 +42,15 @@ export default function GameScreen(): JSX.Element {
 
     async function handleLeave() {
         const nextPlayers = (gameState as GameState).playerScore.filter(p => p.name !== playerNickname);
-        console.log("Players amount " + nextPlayers.length)
         const docRef = doc(db, COLLECTION_PATH, gameId);
-        await setDoc(docRef, {...gameState, playerScore: nextPlayers})
+        if (nextPlayers.length === 0) {
+            await deleteDoc(docRef)
+        } else if (gameState?.activePlayerName === playerNickname){
+            const nextActivePlayerName: string = getNextActivePlayerName(gameState?.playerScore, playerNickname)
+            await setDoc(docRef, {...gameState, playerScore: nextPlayers, activePlayerName: nextActivePlayerName})
+        } else {
+            await setDoc(docRef, {...gameState, playerScore: nextPlayers})
+        }
         localStorage.removeItem(CURRENT_GAME)
         localStorage.removeItem(NICKNAME)
         navigate("/")
@@ -54,12 +60,15 @@ export default function GameScreen(): JSX.Element {
         <div className="game">
 
             <div className="board">
-                <Board gameState={gameState} setGameState={setGameState} isMatchingBySuit={isMatchingBySuit}/>
+                <Board gameState={gameState} isMatchingBySuit={isMatchingBySuit}/>
             </div>
             <div className="game-info">
-                <div>Current room: {gameId}</div><br/>
+                <div>Current room: {gameId}</div>
+                <br/>
                 {gameState.playerScore.map((player) => (
-                    <div  className="status" key={player.name}>{player.name}: {player.score}</div>
+                    <div className="status" key={player.name}>
+                        {player.name}: {player.score} {player.name === gameState.activePlayerName ? "<-" : ""}
+                    </div>
                 ))}
                 <button className="change-matching-rule" onClick={() => setIsMatchingBySuit(!isMatchingBySuit)}>
                     {isMatchingBySuit ? "Change to match by value" : "Change to match by suit"}
@@ -77,13 +86,13 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 interface BoardProps {
     gameState: GameState,
-    setGameState: (points: GameState) => void,
     isMatchingBySuit: Boolean;
 }
 
 function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
     const [flipped, setFlipped] = useState<number[]>(Array());
     const [isLocked, setIsLocked] = useState(false);
+    const isActivePlayer = gameState.activePlayerName === playerNickname;
 
     async function processMatch(updatedFlipped: number[], pointsGained: number) {
         try {
@@ -100,6 +109,14 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
         }
     }
 
+    async function processMismatch() {
+        await delay(revealTimeout);
+        setFlipped(Array());
+        const nextActivePlayerName: string = getNextActivePlayerName(gameState.playerScore, playerNickname)
+        await setDoc(docRef, {...gameState, activePlayerName: nextActivePlayerName})
+        setIsLocked(false)
+    }
+
     function checkIfMatching(updatedFlipped: number[]) {
         const firstCard: PlayingCard = deck[gameState.cardsLayout[updatedFlipped[0]]];
         const secondCard: PlayingCard = deck[gameState.cardsLayout[updatedFlipped[1]]];
@@ -109,15 +126,12 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
         } else if (!isMatchingBySuit && firstCard.isMatchingValue(secondCard)) {
             processMatch(updatedFlipped, 2);
         } else {
-            setTimeout(() => {
-                setFlipped(Array());
-                setIsLocked(false)
-            }, revealTimeout);
+            processMismatch();
         }
     }
 
     function handleClick(index: number) {
-        if (isLocked) {
+        if (isLocked || !isActivePlayer) {
             return;
         }
         const updatedFlipped = [...flipped, index];

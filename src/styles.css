@@ -76,7 +76,7 @@ h1, h2, h3, h4, h5, h6 {
             border-color 0.15s ease;
 }
 
-.card:hover {
+.is-hovered {
     transform: translateY(-4px);
     box-shadow: 0 10px 20px rgba(79, 70, 229, 0.15);
 }

@@ -8,12 +8,14 @@
   },
   "dependencies": {
     "firebase": "^12.13.0",
+    "lodash.debounce": "^4.0.8",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.75.0",
     "react-router-dom": "^7.15.0"
   },
   "devDependencies": {
+    "@types/lodash.debounce": "^4.0.9",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.0.0",

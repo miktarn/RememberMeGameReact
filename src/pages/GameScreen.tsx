@@ -1,4 +1,4 @@
-import {JSX, useEffect, useState} from 'react';
+import {JSX, useEffect, useMemo, useState} from 'react';
 import {PlayingCard} from "../model/PlayingCard";
 import {useNavigate} from "react-router-dom";
 import {deck} from "../model/PlayingCard";
@@ -7,6 +7,7 @@ import {firestore, rtdb} from "../config/firebase.js"
 import {GameState, getNextActivePlayerName, increasePoints} from "../model/GameState";
 import {COLLECTION_PATH, NICKNAME, CURRENT_GAME} from "../model/CommonUtil";
 import {ref, onValue, set} from "firebase/database";
+import debounce from "lodash.debounce";
 
 let gameId: string;
 let docRef: DocumentReference;
@@ -22,15 +23,28 @@ const handleFlipEnd = (thisGameId: string) => {
     set(playerFlipRef, null);
 };
 
-const handleHoverStart = (cardId: number, thisGameId: string) => {
-    const playerFlipRef = ref(rtdb, `rooms/${thisGameId}/hover/${cardId}`);
-    set(playerFlipRef, true);
-};
+export const useHoverAction = (currentGameId: string, cardIndex: number) => {
 
-const handleHoverEnd = (cardId: number, thisGameId: string) => {
-    const playerFlipRef = ref(rtdb, `rooms/${thisGameId}/hover/${cardId}`);
-    set(playerFlipRef, null);
-};
+    const debouncedHoverStart = useMemo(() => {
+        return debounce(() => {
+            const playerFlipRef = ref(rtdb, `rooms/${currentGameId}/hover/${cardIndex}`);
+            set(playerFlipRef, true);
+        }, 100);
+    }, [currentGameId]);
+
+    const handleHoverStart = () => {
+        debouncedHoverStart();
+    };
+
+    const handleHoverEnd = () => {
+        debouncedHoverStart.cancel();
+
+        const playerFlipRef = ref(rtdb, `rooms/${currentGameId}/hover/${cardIndex}`);
+        set(playerFlipRef, null);
+    };
+
+    return {handleHoverStart, handleHoverEnd}
+}
 
 export default function GameScreen(): JSX.Element {
     const navigate = useNavigate();
@@ -195,6 +209,7 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
     }
 
     function buildCardProps(index: number): CardProps {
+        const hoverAction = useHoverAction(gameId, index);
         return {
             card: deck[gameState.cardsLayout[index]],
             isFlipped: flipped.includes(index),
@@ -202,8 +217,8 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
             onClick: () => handleClick(index),
             isHoverEnabled: isActivePlayer,
             isExternalHover: externalHover.includes(index),
-            handleExternalHoverStart: () => handleHoverStart(index, gameId),
-            handleExternalHoverStop: () => handleHoverEnd(index, gameId)
+            handleExternalHoverStart: () => hoverAction.handleHoverStart(),
+            handleExternalHoverStop: () => hoverAction.handleHoverEnd()
         };
     }
 
@@ -252,12 +267,16 @@ function Card({isFlipped, isRemoved, card, onClick, isHoverEnabled, isExternalHo
 
     function handleOnMouseEnter() {
         setIsHover(true);
-        handleExternalHoverStart();
+        if (isHoverEnabled) {
+            handleExternalHoverStart();
+        }
     }
 
     function handleOnMouseLeave() {
         setIsHover(false);
-        handleExternalHoverStop();
+        if (isHoverEnabled) {
+            handleExternalHoverStop();
+        }
     }
 
     if (!isFlipped) {

@@ -1,7 +1,7 @@
 import React, {JSX, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {SubmitHandler, useForm} from "react-hook-form";
-import {db} from "../config/firebase.js"
+import {firestore} from "../config/firebase.js"
 import {collection, addDoc, getDoc, doc, setDoc} from "firebase/firestore";
 import {GameState} from "../model/GameState";
 import {COLLECTION_PATH, CURRENT_GAME, NICKNAME} from "../model/CommonUtil";
@@ -54,7 +54,7 @@ function CreateNewGameForm(): JSX.Element {
         };
 
         console.log("Game state " + newGameState)
-        const docRef = await addDoc(collection(db, COLLECTION_PATH), newGameState);
+        const docRef = await addDoc(collection(firestore, COLLECTION_PATH), newGameState);
         localStorage.setItem(CURRENT_GAME, docRef.id)
         localStorage.setItem(NICKNAME, data.nickname)
 
@@ -77,7 +77,7 @@ function JoinNewGameForm(): JSX.Element {
     const {register, handleSubmit, formState: {errors}, setError} = useForm<JoinGameFormData>();
 
     const onSubmit: SubmitHandler<JoinGameFormData> = async (data) => {
-        const docRef = doc(db, COLLECTION_PATH, data.gameId);
+        const docRef = doc(firestore, COLLECTION_PATH, data.gameId);
         const docSnapshot = await getDoc(docRef);
 
         if (!docSnapshot.exists()) {

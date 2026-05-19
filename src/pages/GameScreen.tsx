@@ -3,13 +3,24 @@ import {PlayingCard} from "../model/PlayingCard";
 import {useNavigate} from "react-router-dom";
 import {deck} from "../model/PlayingCard";
 import {doc, onSnapshot, setDoc, DocumentReference, deleteDoc} from "firebase/firestore";
-import {db} from "../config/firebase.js"
+import {firestore, rtdb} from "../config/firebase.js"
 import {GameState, getNextActivePlayerName, increasePoints} from "../model/GameState";
 import {COLLECTION_PATH, NICKNAME, CURRENT_GAME} from "../model/CommonUtil";
+import {ref, onValue, set} from "firebase/database";
 
 let gameId: string;
 let docRef: DocumentReference;
 let playerNickname: string
+
+const handleFlipStart = (cardId: number, thisGameId: string) => {
+    const playerFlipRef = ref(rtdb, `rooms/${thisGameId}/flips/${cardId}`);
+    set(playerFlipRef, true);
+};
+
+const handleFlipEnd = (thisGameId: string) => {
+    const playerFlipRef = ref(rtdb, `rooms/${thisGameId}/flips`);
+    set(playerFlipRef, null);
+};
 
 export default function GameScreen(): JSX.Element {
     const navigate = useNavigate();
@@ -19,7 +30,7 @@ export default function GameScreen(): JSX.Element {
     useEffect(() => {
         gameId = localStorage.getItem(CURRENT_GAME) as string;
         playerNickname = localStorage.getItem(NICKNAME) as string;
-        docRef = doc(db, COLLECTION_PATH, gameId);
+        docRef = doc(firestore, COLLECTION_PATH, gameId);
         const unsubscribe = onSnapshot(docRef, (docSnapshot) => {
             if (docSnapshot.exists()) {
                 setGameState(docSnapshot.data() as GameState);
@@ -42,7 +53,7 @@ export default function GameScreen(): JSX.Element {
 
     async function handleLeave() {
         const nextPlayers = (gameState as GameState).playerScore.filter(p => p.name !== playerNickname);
-        const docRef = doc(db, COLLECTION_PATH, gameId);
+        const docRef = doc(firestore, COLLECTION_PATH, gameId);
         if (nextPlayers.length === 0) {
             await deleteDoc(docRef)
         } else if (gameState?.activePlayerName === playerNickname){
@@ -94,6 +105,24 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
     const [isLocked, setIsLocked] = useState(false);
     const isActivePlayer = gameState.activePlayerName === playerNickname;
 
+    useEffect(() => {
+        const hoversRef = ref(rtdb, `rooms/${gameId}/flips`);
+
+        // Слушаем изменения всей ветки hovers для этой комнаты
+        const unsubscribe = onValue(hoversRef, (snapshot) => {
+            const data= snapshot.val();
+            if (data) {
+                setFlipped(Object.keys(data).map(Number));
+            } else {
+                setFlipped(Array());
+            }
+        });
+
+        // Отписываемся при размонтировании компонента
+        return () => unsubscribe();
+    }, []);
+
+
     async function processMatch(updatedFlipped: number[], pointsGained: number) {
         try {
             const nextPlayerScore = increasePoints(gameState.playerScore, playerNickname, pointsGained);
@@ -101,7 +130,7 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
             await delay(700)
             const nextRemovedCards = [...gameState.removedCards, updatedFlipped[0], updatedFlipped[1]]
             await setDoc(docRef, {...gameState, removedCards: nextRemovedCards, playerScore: nextPlayerScore})
-            setFlipped(Array())
+            handleFlipEnd(gameId)
             setIsLocked(false)
         } catch (error) {
             console.error("Error during save to Firebase:", error);
@@ -111,7 +140,7 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
 
     async function processMismatch() {
         await delay(revealTimeout);
-        setFlipped(Array());
+        handleFlipEnd(gameId)
         const nextActivePlayerName: string = getNextActivePlayerName(gameState.playerScore, playerNickname)
         await setDoc(docRef, {...gameState, activePlayerName: nextActivePlayerName})
         setIsLocked(false)
@@ -135,8 +164,7 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
             return;
         }
         const updatedFlipped = [...flipped, index];
-        setFlipped(updatedFlipped);
-
+        handleFlipStart(index, gameId)
         if (updatedFlipped.length === 2) {
             setIsLocked(true)
             checkIfMatching(updatedFlipped);

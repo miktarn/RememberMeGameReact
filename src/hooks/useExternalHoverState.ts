@@ -19,14 +19,14 @@ export const useExternalHoverState = (currentGameId: string, cardIndex: number) 
         });
 
         return () => unsubscribe();
-    }, [currentGameId]);
+    }, [currentGameId, cardIndex]);
 
     const debouncedHoverStart = useMemo(() => {
         return debounce(() => {
             const playerFlipRef = ref(rtdb, `rooms/${currentGameId}/hover/${cardIndex}`);
             set(playerFlipRef, true);
         }, 100);
-    }, [currentGameId]);
+    }, [currentGameId, cardIndex]);
 
     const handleHoverStart = () => {
         debouncedHoverStart();

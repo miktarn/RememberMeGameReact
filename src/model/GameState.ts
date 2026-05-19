@@ -1,4 +1,3 @@
-
 export interface GameState {
     cardsLayout: Array<number>
     removedCards: Array<number>
@@ -25,11 +24,11 @@ export function increasePoints(playerScore: Array<Player>, playerName: string, p
 export function getNextActivePlayerName(playerScore: Array<Player>, activePlayerName: string): string {
     for (let i = 0; i < playerScore.length; i++) {
         if (playerScore[i].name === activePlayerName) {
-            const isLast = i === playerScore.length -1;
+            const isLast = i === playerScore.length - 1;
             if (isLast) {
                 return playerScore[0].name
             } else {
-                return playerScore[i+1].name
+                return playerScore[i + 1].name
             }
         }
     }

@@ -3,7 +3,7 @@ import debounce from "lodash.debounce";
 import {onValue, ref, set} from "firebase/database";
 import {rtdb} from "../config/firebase";
 
-export const useSyncExternalHover = (currentGameId: string, cardIndex: number) => {
+export const useExternalHoverState = (currentGameId: string, cardIndex: number) => {
     const [isExternalHover, setExternalHover] = useState(false)
 
     useEffect(() => {

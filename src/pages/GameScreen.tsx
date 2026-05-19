@@ -1,38 +1,17 @@
-import {JSX, useEffect, useState} from 'react';
+import {JSX, useState} from 'react';
 import {deck, PlayingCard} from "../model/PlayingCard";
-import {useNavigate} from "react-router-dom";
-import {deleteDoc, doc, DocumentReference, onSnapshot, setDoc} from "firebase/firestore";
-import {firestore} from "../config/firebase.js"
-import {GameState, getNextActivePlayerName, increasePoints} from "../model/GameState";
-import {COLLECTION_PATH, CURRENT_GAME, NICKNAME} from "../model/CommonUtil";
-import {useSyncExternalHover} from "../hooks/useSyncExternalHover";
-import {useSyncExternalFlip} from "../hooks/useSyncExternalFlip";
-
-let gameId: string;
-let docRef: DocumentReference;
-let playerNickname: string
-
+import {GameState} from "../model/GameState";
+import {CURRENT_GAME, NICKNAME} from "../model/CommonUtil";
+import {useExternalHoverState} from "../hooks/useExternalHoverState";
+import {useFlipState} from "../hooks/useFlipState";
+import {useGameState} from "../hooks/useGameState";
 
 export default function GameScreen(): JSX.Element {
-    const navigate = useNavigate();
-    const [gameState, setGameState] = useState<GameState | undefined | null>();
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
+    const [gameId] = useState(localStorage.getItem(CURRENT_GAME) as string);
+    const [playerNickname] = useState(localStorage.getItem(NICKNAME) as string)
 
-    useEffect(() => {
-        gameId = localStorage.getItem(CURRENT_GAME) as string;
-        playerNickname = localStorage.getItem(NICKNAME) as string;
-        docRef = doc(firestore, COLLECTION_PATH, gameId);
-        const unsubscribe = onSnapshot(docRef, (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                setGameState(docSnapshot.data() as GameState);
-            } else {
-                console.log("Game is not founded by id! " + gameId);
-                setGameState(undefined);
-            }
-        });
-
-        return () => unsubscribe();
-    }, []);
+    const {gameState, handleLeave, checkIfMatching} = useGameState(gameId, playerNickname);
 
     if (gameState === undefined) {
         return <div>Game is loading...</div>;
@@ -42,27 +21,12 @@ export default function GameScreen(): JSX.Element {
         return <div>Error during game info fetching...</div>;
     }
 
-    async function handleLeave() {
-        const nextPlayers = (gameState as GameState).playerScore.filter(p => p.name !== playerNickname);
-        const docRef = doc(firestore, COLLECTION_PATH, gameId);
-        if (nextPlayers.length === 0) {
-            await deleteDoc(docRef)
-        } else if (gameState?.activePlayerName === playerNickname) {
-            const nextActivePlayerName: string = getNextActivePlayerName(gameState?.playerScore, playerNickname)
-            await setDoc(docRef, {...gameState, playerScore: nextPlayers, activePlayerName: nextActivePlayerName})
-        } else {
-            await setDoc(docRef, {...gameState, playerScore: nextPlayers})
-        }
-        localStorage.removeItem(CURRENT_GAME)
-        localStorage.removeItem(NICKNAME)
-        navigate("/")
-    }
-
     return (
         <div className="game">
 
             <div className="board">
-                <Board gameState={gameState} isMatchingBySuit={isMatchingBySuit}/>
+                <Board gameState={gameState} isMatchingBySuit={isMatchingBySuit} checkIfMatching={checkIfMatching}
+                       gameId={gameId} currentPlayerName={playerNickname}/>
             </div>
             <div className="game-info">
                 <div>Current room: {gameId}</div>
@@ -83,54 +47,19 @@ export default function GameScreen(): JSX.Element {
     );
 }
 
-const revealTimeout = 700;
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 interface BoardProps {
     gameState: GameState,
-    isMatchingBySuit: Boolean;
+    isMatchingBySuit: Boolean,
+    checkIfMatching: (updatedFlipped: number[], isMatchingBySuit: Boolean) => Promise<void>,
+    gameId: string,
+    currentPlayerName: string
 }
 
-function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
+function Board({gameState, isMatchingBySuit, checkIfMatching, gameId, currentPlayerName}: BoardProps): JSX.Element {
     const [isLocked, setIsLocked] = useState(false);
-    const isActivePlayer = gameState.activePlayerName === playerNickname;
-    const {flipped, handleFlipStart, handleFlipEnd} = useSyncExternalFlip(gameId)
-
-    async function processMatch(updatedFlipped: number[], pointsGained: number) {
-        try {
-            const nextPlayerScore = increasePoints(gameState.playerScore, playerNickname, pointsGained);
-            await setDoc(docRef, {...gameState, playerScore: nextPlayerScore})
-            await delay(700)
-            const nextRemovedCards = [...gameState.removedCards, updatedFlipped[0], updatedFlipped[1]]
-            await setDoc(docRef, {...gameState, removedCards: nextRemovedCards, playerScore: nextPlayerScore})
-            handleFlipEnd()
-            setIsLocked(false)
-        } catch (error) {
-            console.error("Error during save to Firebase:", error);
-            setIsLocked(false);
-        }
-    }
-
-    async function processMismatch() {
-        await delay(revealTimeout);
-        handleFlipEnd()
-        const nextActivePlayerName: string = getNextActivePlayerName(gameState.playerScore, playerNickname)
-        await setDoc(docRef, {...gameState, activePlayerName: nextActivePlayerName})
-        setIsLocked(false)
-    }
-
-    function checkIfMatching(updatedFlipped: number[]) {
-        const firstCard: PlayingCard = deck[gameState.cardsLayout[updatedFlipped[0]]];
-        const secondCard: PlayingCard = deck[gameState.cardsLayout[updatedFlipped[1]]];
-
-        if (isMatchingBySuit && firstCard.isMatchingSuit(secondCard)) {
-            processMatch(updatedFlipped, 1);
-        } else if (!isMatchingBySuit && firstCard.isMatchingValue(secondCard)) {
-            processMatch(updatedFlipped, 2);
-        } else {
-            processMismatch();
-        }
-    }
+    const isActivePlayer = gameState.activePlayerName === currentPlayerName;
+    const {flipped, handleFlipStart, handleFlipEnd} = useFlipState(gameId)
 
     function handleClick(cardIndex: number) {
         if (isLocked || !isActivePlayer) {
@@ -140,7 +69,11 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
         handleFlipStart(cardIndex)
         if (updatedFlipped.length === 2) {
             setIsLocked(true)
-            checkIfMatching(updatedFlipped);
+            checkIfMatching(updatedFlipped, isMatchingBySuit).then(() => {
+                    handleFlipEnd()
+                    setIsLocked(false)
+                }
+            )
         }
     }
 
@@ -151,7 +84,8 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
             isRemoved: gameState.removedCards.includes(index),
             onClick: () => handleClick(index),
             isHoverEnabled: isActivePlayer,
-            cardIndex: index
+            cardIndex: index,
+            gameId: gameId,
         };
     }
 
@@ -186,10 +120,11 @@ interface CardProps {
     card: PlayingCard,
     isHoverEnabled: boolean,
     cardIndex: number
+    gameId: string
 }
 
-function Card({isFlipped, isRemoved, card, onClick, isHoverEnabled, cardIndex}: CardProps): JSX.Element {
-    const {isExternalHover, handleHoverStart, handleHoverEnd} = useSyncExternalHover(gameId, cardIndex);
+function Card({isFlipped, isRemoved, card, onClick, isHoverEnabled, cardIndex, gameId}: CardProps): JSX.Element {
+    const {isExternalHover, handleHoverStart, handleHoverEnd} = useExternalHoverState(gameId, cardIndex);
     const [isHover, setIsHover] = useState(false)
 
     if (isRemoved) {

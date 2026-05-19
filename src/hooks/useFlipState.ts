@@ -2,7 +2,7 @@ import {rtdb} from "../config/firebase";
 import {onValue, ref, set} from "firebase/database";
 import {useEffect, useState} from "react";
 
-export const useSyncExternalFlip = (currentGameId: string) =>{
+export const useFlipState = (currentGameId: string) =>{
     const [flipped, setFlipped] = useState<number[]>(Array());
 
     useEffect(() => {

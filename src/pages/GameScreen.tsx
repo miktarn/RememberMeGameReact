@@ -22,6 +22,16 @@ const handleFlipEnd = (thisGameId: string) => {
     set(playerFlipRef, null);
 };
 
+const handleHoverStart = (cardId: number, thisGameId: string) => {
+    const playerFlipRef = ref(rtdb, `rooms/${thisGameId}/hover/${cardId}`);
+    set(playerFlipRef, true);
+};
+
+const handleHoverEnd = (cardId: number, thisGameId: string) => {
+    const playerFlipRef = ref(rtdb, `rooms/${thisGameId}/hover/${cardId}`);
+    set(playerFlipRef, null);
+};
+
 export default function GameScreen(): JSX.Element {
     const navigate = useNavigate();
     const [gameState, setGameState] = useState<GameState | undefined | null>();
@@ -104,11 +114,11 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
     const [flipped, setFlipped] = useState<number[]>(Array());
     const [isLocked, setIsLocked] = useState(false);
     const isActivePlayer = gameState.activePlayerName === playerNickname;
+    const [externalHover, setExternalHover] = useState<number[]>(Array());
 
     useEffect(() => {
         const hoversRef = ref(rtdb, `rooms/${gameId}/flips`);
 
-        // Слушаем изменения всей ветки hovers для этой комнаты
         const unsubscribe = onValue(hoversRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -118,10 +128,23 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
             }
         });
 
-        // Отписываемся при размонтировании компонента
         return () => unsubscribe();
     }, []);
 
+    useEffect(() => {
+        const hoversRef = ref(rtdb, `rooms/${gameId}/hover`);
+
+        const unsubscribe = onValue(hoversRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                setExternalHover(Object.keys(data).map(Number));
+            } else {
+                setExternalHover(Array());
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     async function processMatch(updatedFlipped: number[], pointsGained: number) {
         try {
@@ -171,70 +194,85 @@ function Board({gameState, isMatchingBySuit}: BoardProps): JSX.Element {
         }
     }
 
-    function buildCardProps(index: number, isHoverEnabled: boolean): CardProps {
+    function buildCardProps(index: number): CardProps {
         return {
             card: deck[gameState.cardsLayout[index]],
             isFlipped: flipped.includes(index),
             isRemoved: gameState.removedCards.includes(index),
             onClick: () => handleClick(index),
-            isHoverEnabled: isHoverEnabled
+            isHoverEnabled: isActivePlayer,
+            isExternalHover: externalHover.includes(index),
+            handleExternalHoverStart: () => handleHoverStart(index, gameId),
+            handleExternalHoverStop: () => handleHoverEnd(index, gameId)
         };
     }
 
     return (
         <>
             <div className="board-row">
-                <Card {...buildCardProps(0, isActivePlayer)}/>
-                <Card {...buildCardProps(1, isActivePlayer)}/>
-                <Card {...buildCardProps(2, isActivePlayer)}/>
-                <Card {...buildCardProps(3, isActivePlayer)}/>
+                <Card {...buildCardProps(0)}/>
+                <Card {...buildCardProps(1)}/>
+                <Card {...buildCardProps(2)}/>
+                <Card {...buildCardProps(3)}/>
             </div>
             <div className="board-row">
-                <Card {...buildCardProps(4, isActivePlayer)}/>
-                <Card {...buildCardProps(5, isActivePlayer)}/>
-                <Card {...buildCardProps(6, isActivePlayer)}/>
-                <Card {...buildCardProps(7, isActivePlayer)}/>
+                <Card {...buildCardProps(4)}/>
+                <Card {...buildCardProps(5)}/>
+                <Card {...buildCardProps(6)}/>
+                <Card {...buildCardProps(7)}/>
             </div>
             <div className="board-row">
-                <Card {...buildCardProps(8, isActivePlayer)}/>
-                <Card {...buildCardProps(9, isActivePlayer)}/>
-                <Card {...buildCardProps(10, isActivePlayer)}/>
-                <Card {...buildCardProps(11, isActivePlayer)}/>
+                <Card {...buildCardProps(8)}/>
+                <Card {...buildCardProps(9)}/>
+                <Card {...buildCardProps(10)}/>
+                <Card {...buildCardProps(11)}/>
             </div>
         </>
     );
 }
-
 
 interface CardProps {
     onClick: () => void,
     isFlipped: boolean,
     isRemoved: boolean,
     card: PlayingCard,
-    isHoverEnabled: boolean;
+    isHoverEnabled: boolean,
+    isExternalHover: boolean,
+    handleExternalHoverStart: () => void,
+    handleExternalHoverStop: () => void;
 }
 
-function Card({isFlipped, isRemoved, card, onClick, isHoverEnabled}: CardProps): JSX.Element {
+function Card({isFlipped, isRemoved, card, onClick, isHoverEnabled, isExternalHover, handleExternalHoverStart, handleExternalHoverStop}: CardProps): JSX.Element {
     if (isRemoved) {
         return <div className="card"/>
     }
 
     const [isHover, setIsHover] = useState(false)
-    const hoverStatus = isHover && isHoverEnabled ? 'is-hovered' : '';
+    const hoverStatus = isHover && isHoverEnabled || isExternalHover ? 'is-hovered' : '';
+
+    function handleOnMouseEnter() {
+        setIsHover(true);
+        handleExternalHoverStart();
+    }
+
+    function handleOnMouseLeave() {
+        setIsHover(false);
+        handleExternalHoverStop();
+    }
+
     if (!isFlipped) {
-        return <button className={`card ${hoverStatus}`} onClick={onClick}
-                       onMouseEnter={() => setIsHover(true)}
-                       onMouseLeave={() => setIsHover(false)}>
+        return <button className={`card ${hoverStatus}`} onClick={onClick} onMouseEnter={handleOnMouseEnter}
+                       onMouseLeave={handleOnMouseLeave}>
             ***
         </button>;
     }
 
     const colorClass = card.isRed() ? "darkred-font-color" : "black-font-color";
-    return (<button className={`card ${hoverStatus}`}
-                    onMouseEnter={() => setIsHover(true)}
-                    onMouseLeave={() => setIsHover(false)}>
+
+    return <button className={`card ${hoverStatus}`} onMouseEnter={handleOnMouseEnter}
+                   onMouseLeave={handleOnMouseLeave}>
         <div className={`${colorClass}`}>
             {card.toString()}
         </div>
-    </button>);
+    </button>;
 }

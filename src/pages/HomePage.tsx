@@ -1,5 +1,5 @@
 import React, {JSX, useState} from "react";
-import {Link, useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {SubmitHandler, useForm} from "react-hook-form";
 import {firestore} from "../config/firebase.js"
 import {collection, addDoc, getDoc, doc, setDoc} from "firebase/firestore";
@@ -43,7 +43,7 @@ function CreateNewGameForm(): JSX.Element {
     const navigate = useNavigate();
     const {register, handleSubmit, formState: {errors}} = useForm<CreateGameFormData>();
 
-    const onSubmit: SubmitHandler<CreateGameFormData> = async (data) => {
+    const processSubmitEventData: SubmitHandler<CreateGameFormData> = async (data) => {
         const newGameState: GameState = {
             cardsLayout: Array.from({length: 12}, () =>
                 Math.floor(Math.random() * 52)
@@ -61,7 +61,7 @@ function CreateNewGameForm(): JSX.Element {
         navigate("/game")
     }
 
-    return <form onSubmit={handleSubmit(onSubmit)}>
+    return <form onSubmit={handleSubmit(processSubmitEventData)}>
         <br/>
         <input {...register("nickname", {required: "Username should not be empty"})} type="text"
                placeholder="Enter your nickname"></input><br/><br/>

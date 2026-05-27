@@ -47,7 +47,6 @@ export default function GameScreen(): JSX.Element {
     );
 }
 
-
 interface BoardProps {
     gameState: GameState,
     isMatchingBySuit: Boolean,
@@ -58,11 +57,11 @@ interface BoardProps {
 
 function Board({gameState, isMatchingBySuit, checkIfMatching, gameId, currentPlayerName}: BoardProps): JSX.Element {
     const [isLocked, setIsLocked] = useState(false);
-    const isActivePlayer = gameState.activePlayerName === currentPlayerName;
+    const isPlayerTurn = gameState.activePlayerName === currentPlayerName;
     const {flipped, handleFlipStart, handleFlipEnd} = useFlipState(gameId)
 
     function handleClick(cardIndex: number) {
-        if (isLocked || !isActivePlayer) {
+        if (isLocked || !isPlayerTurn) {
             return;
         }
         const updatedFlipped = [...flipped, cardIndex];
@@ -83,7 +82,7 @@ function Board({gameState, isMatchingBySuit, checkIfMatching, gameId, currentPla
             isFlipped: flipped.includes(index),
             isRemoved: gameState.removedCards.includes(index),
             onClick: () => handleClick(index),
-            isHoverEnabled: isActivePlayer,
+            isPlayerTurn: isPlayerTurn,
             cardIndex: index,
             gameId: gameId,
         };
@@ -118,31 +117,31 @@ interface CardProps {
     isFlipped: boolean,
     isRemoved: boolean,
     card: PlayingCard,
-    isHoverEnabled: boolean,
+    isPlayerTurn: boolean,
     cardIndex: number
     gameId: string
 }
 
-function Card({isFlipped, isRemoved, card, onClick, isHoverEnabled, cardIndex, gameId}: CardProps): JSX.Element {
+function Card({isFlipped, isRemoved, card, onClick, isPlayerTurn, cardIndex, gameId}: CardProps): JSX.Element {
     const {isExternalHover, handleHoverStart, handleHoverEnd} = useExternalHoverState(gameId, cardIndex);
     const [isHover, setIsHover] = useState(false)
 
     if (isRemoved) {
         return <div className="card"/>
-
     }
-    const hoverStatus = isHover && isHoverEnabled || isExternalHover ? 'is-hovered' : '';
+
+    const hoverStatus = isHover && isPlayerTurn || isExternalHover ? 'is-hovered' : '';
 
     function handleOnMouseEnter() {
         setIsHover(true);
-        if (isHoverEnabled) {
+        if (isPlayerTurn) {
             handleHoverStart();
         }
     }
 
     function handleOnMouseLeave() {
         setIsHover(false);
-        if (isHoverEnabled) {
+        if (isPlayerTurn) {
             handleHoverEnd();
         }
     }

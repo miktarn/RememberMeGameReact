@@ -1,17 +1,15 @@
-import {JSX, useState} from 'react';
+import {JSX, useContext, useState} from 'react';
 import {deck, PlayingCard} from "../model/PlayingCard";
 import {GameState} from "../model/GameState";
-import {CURRENT_GAME, NICKNAME} from "../model/CommonUtil";
 import {useExternalHoverState} from "../hooks/useExternalHoverState";
 import {useFlipState} from "../hooks/useFlipState";
 import {useGameState} from "../hooks/useGameState";
+import {GameContext} from "../GameContext";
 
 export default function GameScreen(): JSX.Element {
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
-    const [gameId] = useState(localStorage.getItem(CURRENT_GAME) as string);
-    const [playerNickname] = useState(localStorage.getItem(NICKNAME) as string)
-
-    const {gameState, handleLeave, checkIfMatching} = useGameState(gameId, playerNickname);
+    const {gameId, playerName} = useContext(GameContext)
+    const {gameState, handleLeave, checkIfMatching} = useGameState(gameId, playerName);
 
     if (gameState === undefined) {
         return <div>Game is loading...</div>;
@@ -25,8 +23,7 @@ export default function GameScreen(): JSX.Element {
         <div className="game">
 
             <div className="board">
-                <Board gameState={gameState} isMatchingBySuit={isMatchingBySuit} checkIfMatching={checkIfMatching}
-                       gameId={gameId} currentPlayerName={playerNickname}/>
+                <Board gameState={gameState} isMatchingBySuit={isMatchingBySuit} checkIfMatching={checkIfMatching}/>
             </div>
             <div className="game-info">
                 <div>Current room: {gameId}</div>
@@ -51,13 +48,12 @@ interface BoardProps {
     gameState: GameState,
     isMatchingBySuit: Boolean,
     checkIfMatching: (updatedFlipped: number[], isMatchingBySuit: Boolean) => Promise<void>,
-    gameId: string,
-    currentPlayerName: string
 }
 
-function Board({gameState, isMatchingBySuit, checkIfMatching, gameId, currentPlayerName}: BoardProps): JSX.Element {
+function Board({gameState, isMatchingBySuit, checkIfMatching}: BoardProps): JSX.Element {
+    const {playerName, gameId} = useContext(GameContext)
     const [isLocked, setIsLocked] = useState(false);
-    const isPlayerTurn = gameState.activePlayerName === currentPlayerName;
+    const isPlayerTurn = gameState.activePlayerName === playerName;
     const {flipped, handleFlipStart, handleFlipEnd} = useFlipState(gameId)
 
     function handleClick(cardIndex: number) {
@@ -84,7 +80,6 @@ function Board({gameState, isMatchingBySuit, checkIfMatching, gameId, currentPla
             onClick: () => handleClick(index),
             isPlayerTurn: isPlayerTurn,
             cardIndex: index,
-            gameId: gameId,
         };
     }
 
@@ -119,10 +114,10 @@ interface CardProps {
     card: PlayingCard,
     isPlayerTurn: boolean,
     cardIndex: number
-    gameId: string
 }
 
-function Card({isFlipped, isRemoved, card, onClick, isPlayerTurn, cardIndex, gameId}: CardProps): JSX.Element {
+function Card({isFlipped, isRemoved, card, onClick, isPlayerTurn, cardIndex}: CardProps): JSX.Element {
+    const {gameId} = useContext(GameContext)
     const {isExternalHover, handleHoverStart, handleHoverEnd} = useExternalHoverState(gameId, cardIndex);
     const [isHover, setIsHover] = useState(false)
 

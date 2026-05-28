@@ -7,6 +7,7 @@ import "./styles.css";
 import NotFoundPage from './pages/NotFoundPage';
 import GameScreen from "./pages/GameScreen";
 import HomePage from "./pages/HomePage";
+import {GameContext, GameContextProvider} from "./GameContext";
 
 const root = createRoot(document.getElementById("root") as HTMLElement);
 
@@ -28,6 +29,8 @@ const router = createBrowserRouter([
 
 root.render(
     <StrictMode>
-        <RouterProvider router={router}/>
+        <GameContextProvider>
+            <RouterProvider router={router}/>
+        </GameContextProvider>
     </StrictMode>
 );

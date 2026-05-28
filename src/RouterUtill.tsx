@@ -1,6 +1,6 @@
 import {Navigate, Outlet} from 'react-router-dom';
-
-const CURRENT_GAME = "current_game";
+import {useContext} from "react";
+import {GameContext} from "./GameContext";
 
 interface GameGuardProps {
     requiredGameState: boolean;
@@ -8,8 +8,8 @@ interface GameGuardProps {
 }
 
 export const GameStateRoutingFilter = ({requiredGameState, redirectTo}: GameGuardProps) => {
-    const hasGame = localStorage.getItem(CURRENT_GAME) !== null;
-
+    const GameContextData = useContext(GameContext)
+    const hasGame = GameContextData.playerName !== ""
     if (hasGame !== requiredGameState) {
         return <Navigate to={redirectTo} replace/>;
     }

@@ -1,10 +1,11 @@
-import {useEffect, useState} from "react";
+import {useContext, useEffect, useState} from "react";
 import {GameState, getNextActivePlayerName, increasePoints} from "../model/GameState";
 import {deleteDoc, doc, DocumentReference, onSnapshot, setDoc} from "firebase/firestore";
 import {firestore} from "../config/firebase";
-import {COLLECTION_PATH, CURRENT_GAME, NICKNAME} from "../model/CommonUtil";
+import {COLLECTION_PATH} from "../model/CommonUtil";
 import {useNavigate} from "react-router-dom";
 import {deck, PlayingCard} from "../model/PlayingCard";
+import {GameContext} from "../GameContext";
 
 let docRef: DocumentReference;
 const revealTimeout = 700;
@@ -13,6 +14,7 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export const useGameState = (currentGameId: string, playerName: string) => {
     const [gameState, setGameState] = useState<GameState>();
     const navigate = useNavigate();
+    const {clearContext}= useContext(GameContext)
 
     useEffect(() => {
         docRef = doc(firestore, COLLECTION_PATH, currentGameId);
@@ -39,8 +41,7 @@ export const useGameState = (currentGameId: string, playerName: string) => {
         } else {
             await setDoc(docRef, {...gameState, playerScore: nextPlayers})
         }
-        localStorage.removeItem(CURRENT_GAME)
-        localStorage.removeItem(NICKNAME)
+        clearContext()
         navigate("/")
     }
 

@@ -1,10 +1,11 @@
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {SubmitHandler, useForm} from "react-hook-form";
 import {firestore} from "../config/firebase.js"
 import {collection, addDoc, getDoc, doc, setDoc} from "firebase/firestore";
 import {GameState} from "../model/GameState";
-import {COLLECTION_PATH, CURRENT_GAME, NICKNAME} from "../model/CommonUtil";
+import {COLLECTION_PATH} from "../model/CommonUtil";
+import {GameContext} from "../GameContext";
 
 type CreateGameFormData = {
     nickname: string
@@ -42,6 +43,7 @@ export default function HomePage(): JSX.Element {
 function CreateNewGameForm(): JSX.Element {
     const navigate = useNavigate();
     const {register, handleSubmit, formState: {errors}} = useForm<CreateGameFormData>();
+    const {setContextData} = useContext(GameContext)
 
     const processSubmitEventData: SubmitHandler<CreateGameFormData> = async (data) => {
         const newGameState: GameState = {
@@ -55,9 +57,7 @@ function CreateNewGameForm(): JSX.Element {
 
         console.log("Game state " + newGameState)
         const docRef = await addDoc(collection(firestore, COLLECTION_PATH), newGameState);
-        localStorage.setItem(CURRENT_GAME, docRef.id)
-        localStorage.setItem(NICKNAME, data.nickname)
-
+        setContextData(data.nickname, docRef.id)
         navigate("/game")
     }
 
@@ -75,6 +75,7 @@ function CreateNewGameForm(): JSX.Element {
 function JoinNewGameForm(): JSX.Element {
     const navigate = useNavigate();
     const {register, handleSubmit, formState: {errors}, setError} = useForm<JoinGameFormData>();
+    const {setContextData} = useContext(GameContext)
 
     const onSubmit: SubmitHandler<JoinGameFormData> = async (data) => {
         const docRef = doc(firestore, COLLECTION_PATH, data.gameId);
@@ -94,8 +95,7 @@ function JoinNewGameForm(): JSX.Element {
         const playerScore = gameState.playerScore;
         const nextPlayerScore = [...playerScore, {name: data.nickname, score: 0}]
         await setDoc(docRef, {...gameState, playerScore: nextPlayerScore});
-        localStorage.setItem(CURRENT_GAME, docRef.id)
-        localStorage.setItem(NICKNAME, data.nickname)
+        setContextData(data.nickname, docRef.id)
 
         navigate("/game")
     }

@@ -116,7 +116,7 @@ interface CardProps {
     cardIndex: number
 }
 
-function Card({isFlipped, isRemoved, card, onClick, isPlayerTurn, cardIndex}: CardProps): JSX.Element {
+export function Card({isFlipped, isRemoved, card, onClick, isPlayerTurn, cardIndex}: CardProps): JSX.Element {
     const {gameId} = useContext(GameContext)
     const {isExternalHover, handleHoverStart, handleHoverEnd} = useExternalHoverState(gameId, cardIndex);
     const [isHover, setIsHover] = useState(false)

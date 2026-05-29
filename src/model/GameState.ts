@@ -3,6 +3,7 @@ export interface GameState {
     removedCards: Array<number>
     playerScore: Array<Player>
     activePlayerName: string
+    timer: number
 }
 
 export interface Player {

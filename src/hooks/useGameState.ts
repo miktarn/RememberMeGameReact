@@ -6,15 +6,28 @@ import {COLLECTION_PATH} from "../model/CommonUtil";
 import {useNavigate} from "react-router-dom";
 import {deck, PlayingCard} from "../model/PlayingCard";
 import {GameContext} from "../GameContext";
+import {useCountdown} from "./useCountdown";
 
 let docRef: DocumentReference;
 const revealTimeout = 700;
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
+
 export const useGameState = (currentGameId: string, playerName: string) => {
     const [gameState, setGameState] = useState<GameState>();
+    const {seconds, resetCountdown} = useCountdown(gameState?.timer ?? 6)
     const navigate = useNavigate();
     const {clearContext}= useContext(GameContext)
+
+    useEffect(() => {
+        resetCountdown()
+    }, [gameState?.activePlayerName]);
+
+    useEffect(() => {
+        if (seconds === 0 && gameState?.activePlayerName === playerName && gameState.playerScore.length > 1) {
+            passTurn(gameState)
+        }
+    }, [seconds, gameState?.playerScore.length]);
 
     useEffect(() => {
         docRef = doc(firestore, COLLECTION_PATH, currentGameId);
@@ -29,6 +42,11 @@ export const useGameState = (currentGameId: string, playerName: string) => {
 
         return () => unsubscribe();
     }, [currentGameId]);
+
+    async function passTurn(gameState: GameState) {
+        const nextActivePlayerName: string = getNextActivePlayerName(gameState.playerScore, playerName)
+        await setDoc(docRef, {...gameState, activePlayerName: nextActivePlayerName})
+    }
 
     async function handleLeave() {
         const nextPlayers = (gameState as GameState).playerScore.filter(p => p.name !== playerName);
@@ -53,6 +71,7 @@ export const useGameState = (currentGameId: string, playerName: string) => {
             await delay(revealTimeout)
             const nextRemovedCards = [...gameState.removedCards, updatedFlipped[0], updatedFlipped[1]]
             await setDoc(docRef, {...gameState, removedCards: nextRemovedCards, playerScore: nextPlayerScore})
+            resetCountdown()
         } catch (error) {
             console.error("Error during save to Firebase:", error);
         }
@@ -61,8 +80,7 @@ export const useGameState = (currentGameId: string, playerName: string) => {
     async function processMismatch() {
         if (!gameState) return;
         await delay(revealTimeout);
-        const nextActivePlayerName: string = getNextActivePlayerName(gameState.playerScore, playerName)
-        await setDoc(docRef, {...gameState, activePlayerName: nextActivePlayerName})
+        await passTurn(gameState);
     }
 
     async function checkIfMatching(updatedFlipped: number[], isMatchingBySuit: Boolean) {
@@ -79,5 +97,5 @@ export const useGameState = (currentGameId: string, playerName: string) => {
         }
     }
 
-    return {gameState, handleLeave, checkIfMatching};
+    return {gameState, handleLeave, checkIfMatching, seconds};
 }

@@ -1,6 +1,6 @@
 import {render, screen} from '@testing-library/react'
 import '@testing-library/jest-dom'
-import {Card} from "../src/pages/GameScreen";
+import {Card} from "../src/components/GameScreen";
 import {deck} from "../src/model/PlayingCard";
 
 

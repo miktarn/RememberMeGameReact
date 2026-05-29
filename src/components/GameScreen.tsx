@@ -9,7 +9,7 @@ import {GameContext} from "../GameContext";
 export default function GameScreen(): JSX.Element {
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
     const {gameId, playerName} = useContext(GameContext)
-    const {gameState, handleLeave, checkIfMatching} = useGameState(gameId, playerName);
+    const {gameState, handleLeave, checkIfMatching, seconds} = useGameState(gameId, playerName);
 
     if (gameState === undefined) {
         return <div>Game is loading...</div>;
@@ -21,18 +21,24 @@ export default function GameScreen(): JSX.Element {
 
     return (
         <div className="game">
-
             <div className="board">
                 <Board gameState={gameState} isMatchingBySuit={isMatchingBySuit} checkIfMatching={checkIfMatching}/>
             </div>
             <div className="game-info">
                 <div>Current room: {gameId}</div>
                 <br/>
-                {gameState.playerScore.map((player) => (
-                    <div className="status" key={player.name}>
-                        {player.name}: {player.score} {player.name === gameState.activePlayerName ? "<-" : ""}
-                    </div>
-                ))}
+                {gameState.playerScore.map((player) => {
+                    const shouldBeMarkedActive : boolean = player.name === gameState.activePlayerName;
+                    const shouldHighlightRed : boolean = shouldBeMarkedActive && player.name === playerName
+                    return (
+                        <div className={`status`} key={player.name}>
+                            {player.name}: {player.score}
+                            <label className={`status ${shouldHighlightRed ? 'darkred-font-color' : ''}`}>
+                                {shouldBeMarkedActive ? "<- " + seconds : ""}
+                            </label>
+                        </div>
+                    );
+                })}
                 <div className="mode-row-container">
                     <label className="mode-info">{!isMatchingBySuit ? "Matching by value" : "Matching by suit"}</label>
 

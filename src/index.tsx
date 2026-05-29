@@ -4,9 +4,9 @@ import {createBrowserRouter, RouterProvider} from "react-router-dom";
 import {GameStateRoutingFilter} from "./RouterUtill";
 // @ts-ignore
 import "./styles.css";
-import NotFoundPage from './pages/NotFoundPage';
-import GameScreen from "./pages/GameScreen";
-import HomePage from "./pages/HomePage";
+import NotFoundPage from './components/NotFoundPage';
+import GameScreen from "./components/GameScreen";
+import HomePage from "./components/home/HomePage";
 import {GameContext, GameContextProvider} from "./GameContext";
 
 const root = createRoot(document.getElementById("root") as HTMLElement);

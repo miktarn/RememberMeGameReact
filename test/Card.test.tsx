@@ -6,7 +6,7 @@ import {deck} from "../src/model/PlayingCard";
 
 const CardProps = {
     onClick: () => {},
-    isFlipped: false,
+    isFlipped: true,
     isRemoved: false,
     card: deck[0],
     isPlayerTurn: true,
@@ -20,5 +20,5 @@ test('Should render loading screen', async () => {
     // ACT
 
     // ASSERT
-    expect(screen.getByText('***')).toBeInTheDocument();
+    expect(screen.getByText('2♥')).toBeInTheDocument();
 })

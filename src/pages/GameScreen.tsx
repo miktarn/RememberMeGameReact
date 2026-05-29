@@ -1,4 +1,4 @@
-import {JSX, useContext, useState} from 'react';
+import {JSX, useContext, useMemo, useState} from 'react';
 import {deck, PlayingCard} from "../model/PlayingCard";
 import {GameState} from "../model/GameState";
 import {useExternalHoverState} from "../hooks/useExternalHoverState";
@@ -33,9 +33,13 @@ export default function GameScreen(): JSX.Element {
                         {player.name}: {player.score} {player.name === gameState.activePlayerName ? "<-" : ""}
                     </div>
                 ))}
-                <button className="change-matching-rule" onClick={() => setIsMatchingBySuit(!isMatchingBySuit)}>
-                    {isMatchingBySuit ? "Change to match by value" : "Change to match by suit"}
-                </button>
+                <div className="mode-row-container">
+                    <label className="mode-info">{!isMatchingBySuit ? "Matching by value" : "Matching by suit"}</label>
+
+                    <button className="change-matching-rule" onClick={() => setIsMatchingBySuit(!isMatchingBySuit)}>
+                        Change mode
+                    </button>
+                </div>
             </div>
             <div>
                 <button className="not-important-button" onClick={handleLeave}>Leave the game</button>
@@ -50,11 +54,25 @@ interface BoardProps {
     checkIfMatching: (updatedFlipped: number[], isMatchingBySuit: Boolean) => Promise<void>,
 }
 
+function defineBoardSize(layoutSize: number): [number, number] {
+    if (layoutSize == 12) {
+        return [4, 3]
+    } else if (layoutSize == 24) {
+        return [6, 4]
+    } else if (layoutSize == 40) {
+        return [8, 5]
+    }
+    return [12, 5]
+}
+
 function Board({gameState, isMatchingBySuit, checkIfMatching}: BoardProps): JSX.Element {
     const {playerName, gameId} = useContext(GameContext)
     const [isLocked, setIsLocked] = useState(false);
     const isPlayerTurn = gameState.activePlayerName === playerName;
     const {flipped, handleFlipStart, handleFlipEnd} = useFlipState(gameId)
+    const [columns, rows] = useMemo<[number, number]>(
+        () => defineBoardSize(gameState.cardsLayout.length), [gameState.cardsLayout.length]
+    )
 
     function handleClick(cardIndex: number) {
         if (isLocked || !isPlayerTurn) {
@@ -85,24 +103,15 @@ function Board({gameState, isMatchingBySuit, checkIfMatching}: BoardProps): JSX.
 
     return (
         <>
-            <div className="board-row">
-                <Card {...buildCardProps(0)}/>
-                <Card {...buildCardProps(1)}/>
-                <Card {...buildCardProps(2)}/>
-                <Card {...buildCardProps(3)}/>
-            </div>
-            <div className="board-row">
-                <Card {...buildCardProps(4)}/>
-                <Card {...buildCardProps(5)}/>
-                <Card {...buildCardProps(6)}/>
-                <Card {...buildCardProps(7)}/>
-            </div>
-            <div className="board-row">
-                <Card {...buildCardProps(8)}/>
-                <Card {...buildCardProps(9)}/>
-                <Card {...buildCardProps(10)}/>
-                <Card {...buildCardProps(11)}/>
-            </div>
+            {Array.from({ length: rows }).map((_, rowIndex) => (
+                <div className="board-row" key={rowIndex}>
+                    {Array.from({ length: columns }).map((_, cardIndex) => {
+                        const globalIndex = rowIndex * columns + cardIndex;
+                        console.log("Global index " + globalIndex)
+                        return <Card key={globalIndex} {...buildCardProps(globalIndex)} />;
+                    })}
+                </div>
+            ))}
         </>
     );
 }
@@ -122,7 +131,7 @@ export function Card({isFlipped, isRemoved, card, onClick, isPlayerTurn, cardInd
     const [isHover, setIsHover] = useState(false)
 
     if (isRemoved) {
-        return <div className="card"/>
+        return <button className="card"/>
     }
 
     const hoverStatus = isHover && isPlayerTurn || isExternalHover ? 'is-hovered' : '';
@@ -144,7 +153,7 @@ export function Card({isFlipped, isRemoved, card, onClick, isPlayerTurn, cardInd
     if (!isFlipped) {
         return <button className={`card ${hoverStatus}`} onClick={onClick} onMouseEnter={handleOnMouseEnter}
                        onMouseLeave={handleOnMouseLeave}>
-            ***
+            <div className={`card-background`}></div>
         </button>;
     }
 

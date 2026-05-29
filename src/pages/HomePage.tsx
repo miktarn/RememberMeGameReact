@@ -8,7 +8,8 @@ import {COLLECTION_PATH} from "../model/CommonUtil";
 import {GameContext} from "../GameContext";
 
 type CreateGameFormData = {
-    nickname: string
+    nickname: string,
+    cardsAmount: string
 }
 
 type JoinGameFormData = {
@@ -42,12 +43,14 @@ export default function HomePage(): JSX.Element {
 
 function CreateNewGameForm(): JSX.Element {
     const navigate = useNavigate();
-    const {register, handleSubmit, formState: {errors}} = useForm<CreateGameFormData>();
+    const {register, handleSubmit, formState: {errors}} = useForm<CreateGameFormData>({
+        defaultValues: {cardsAmount: "24"}
+    });
     const {setContextData} = useContext(GameContext)
 
     const processSubmitEventData: SubmitHandler<CreateGameFormData> = async (data) => {
         const newGameState: GameState = {
-            cardsLayout: Array.from({length: 12}, () =>
+            cardsLayout: Array.from({length: Number(data.cardsAmount)}, () =>
                 Math.floor(Math.random() * 52)
             ),
             removedCards: [],
@@ -64,10 +67,25 @@ function CreateNewGameForm(): JSX.Element {
     return <form onSubmit={handleSubmit(processSubmitEventData)}>
         <br/>
         <input {...register("nickname", {required: "Username should not be empty"})} type="text"
-               placeholder="Enter your nickname"></input><br/><br/>
-        {errors.nickname && <>
-            <div style={{color: "red"}}>{errors.nickname.message}</div>
-            <br/></>}
+               placeholder="Enter your nickname">
+        </input><br/><br/>
+        {errors.nickname && <><div style={{color: "red"}}>{errors.nickname.message}</div><br/></>}
+        <label>
+            <input type="radio" {...register("cardsAmount")} value="12" />
+            Easy 4х3
+        </label><br/>
+        <label>
+            <input type="radio" {...register("cardsAmount")} value="24" />
+            Medium 6х4
+        </label><br/>
+        <label>
+            <input type="radio" {...register("cardsAmount")} value="40" />
+            Big 8х5
+        </label><br/>
+        <label>
+            <input type="radio" {...register("cardsAmount")} value="60" />
+            Enormous 12х5
+        </label><br/><br/>
         <button type="submit">New Game</button>
     </form>
 }

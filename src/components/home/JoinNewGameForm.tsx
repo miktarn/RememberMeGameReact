@@ -42,15 +42,15 @@ export function JoinNewGameForm(): JSX.Element {
 
     return <form onSubmit={handleSubmit(onSubmit)}>
         <br/>
-        <input {...register("gameId", {required: "Game id should not be empty"})} type="text"
-               placeholder="Enter rooms game ID"></input><br/><br/>
-        {errors.gameId && <>
-            <div style={{color: "red"}}>{errors.gameId.message}</div>
-            <br/></>}
         <input {...register("nickname", {required: "Username should not be empty"})} type="text"
                placeholder="Enter your nickname"></input><br/><br/>
         {errors.nickname && <>
             <div style={{color: "red"}}>{errors.nickname.message}</div>
+            <br/></>}
+        <input {...register("gameId", {required: "Game id should not be empty"})} type="text"
+               placeholder="Enter rooms game ID"></input><br/><br/>
+        {errors.gameId && <>
+            <div style={{color: "red"}}>{errors.gameId.message}</div>
             <br/></>}
         <button type="submit">Join Game</button>
     </form>

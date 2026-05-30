@@ -1,5 +1,5 @@
-import {JSX, useContext, useMemo, useState} from 'react';
-import {deck, PlayingCard} from "../model/PlayingCard";
+import {JSX, useContext, useEffect, useMemo, useState} from 'react';
+import {deck} from "../model/PlayingCard";
 import {GameState} from "../model/GameState";
 import {useExternalHoverState} from "../hooks/useExternalHoverState";
 import {useFlipState} from "../hooks/useFlipState";
@@ -9,7 +9,14 @@ import {GameContext} from "../GameContext";
 export default function GameScreen(): JSX.Element {
     const [isMatchingBySuit, setIsMatchingBySuit] = useState(true)
     const {gameId, playerName} = useContext(GameContext)
-    const {gameState, handleLeave, checkIfMatching, seconds} = useGameState(gameId, playerName);
+    const {
+        gameState,
+        handleLeave,
+        checkIfMatching,
+        seconds,
+        isGameOver,
+        gameOverMessage
+    } = useGameState(gameId, playerName);
 
     if (gameState === undefined) {
         return <div>Game is loading...</div>;
@@ -22,20 +29,23 @@ export default function GameScreen(): JSX.Element {
     return (
         <div className="game">
             <div className="board">
-                <Board gameState={gameState} isMatchingBySuit={isMatchingBySuit} checkIfMatching={checkIfMatching}/>
+                <Board gameState={gameState} isMatchingBySuit={isMatchingBySuit} checkIfMatching={checkIfMatching}
+                       isGameOver={isGameOver}/>
             </div>
             <div className="game-info">
-                <div>Current room: {gameId}</div>
+                {isGameOver ? <div className="game-over-title">{gameOverMessage}</div> : <div>Current room: {gameId}</div>}
                 <br/>
                 {gameState.playerScore.map((player) => {
-                    const shouldBeMarkedActive : boolean = player.name === gameState.activePlayerName;
-                    const shouldHighlightRed : boolean = shouldBeMarkedActive && player.name === playerName
+                    const shouldBeMarkedActive: boolean = player.name === gameState.activePlayerName;
+                    const shouldHighlightRed: boolean = shouldBeMarkedActive && player.name === playerName
                     return (
                         <div className={`status`} key={player.name}>
                             {player.name}: {player.score}
-                            <label className={`status ${shouldHighlightRed ? 'darkred-font-color' : ''}`}>
-                                {shouldBeMarkedActive ? "<- " + seconds : ""}
-                            </label>
+                            {!isGameOver &&
+                                <label className={`status ${shouldHighlightRed ? 'darkred-font-color' : ''}`}>
+                                    {shouldBeMarkedActive ? "<- " + seconds : ""}
+                                </label>
+                            }
                         </div>
                     );
                 })}
@@ -58,6 +68,7 @@ interface BoardProps {
     gameState: GameState,
     isMatchingBySuit: Boolean,
     checkIfMatching: (updatedFlipped: number[], isMatchingBySuit: Boolean) => Promise<void>,
+    isGameOver: boolean,
 }
 
 function defineBoardSize(layoutSize: number): [number, number] {
@@ -71,7 +82,7 @@ function defineBoardSize(layoutSize: number): [number, number] {
     return [12, 5]
 }
 
-function Board({gameState, isMatchingBySuit, checkIfMatching}: BoardProps): JSX.Element {
+function Board({gameState, isMatchingBySuit, checkIfMatching, isGameOver}: BoardProps): JSX.Element {
     const {playerName, gameId} = useContext(GameContext)
     const [isLocked, setIsLocked] = useState(false);
     const isPlayerTurn = gameState.activePlayerName === playerName;
@@ -79,6 +90,12 @@ function Board({gameState, isMatchingBySuit, checkIfMatching}: BoardProps): JSX.
     const [columns, rows] = useMemo<[number, number]>(
         () => defineBoardSize(gameState.cardsLayout.length), [gameState.cardsLayout.length]
     )
+
+    useEffect(() => {
+        if (isGameOver) {
+            setIsLocked(true);
+        }
+    }, [isGameOver]);
 
     function handleClick(cardIndex: number) {
         if (isLocked || !isPlayerTurn) {
@@ -98,9 +115,8 @@ function Board({gameState, isMatchingBySuit, checkIfMatching}: BoardProps): JSX.
 
     function buildCardProps(index: number): CardProps {
         return {
-            card: deck[gameState.cardsLayout[index]],
-            isFlipped: flipped.includes(index),
-            isRemoved: gameState.removedCards.includes(index),
+            cardId: gameState.cardsLayout[index],
+            isFlipped: flipped.includes(index) || isGameOver,
             onClick: () => handleClick(index),
             isPlayerTurn: isPlayerTurn,
             cardIndex: index,
@@ -109,11 +125,10 @@ function Board({gameState, isMatchingBySuit, checkIfMatching}: BoardProps): JSX.
 
     return (
         <>
-            {Array.from({ length: rows }).map((_, rowIndex) => (
+            {Array.from({length: rows}).map((_, rowIndex) => (
                 <div className="board-row" key={rowIndex}>
-                    {Array.from({ length: columns }).map((_, cardIndex) => {
+                    {Array.from({length: columns}).map((_, cardIndex) => {
                         const globalIndex = rowIndex * columns + cardIndex;
-                        console.log("Global index " + globalIndex)
                         return <Card key={globalIndex} {...buildCardProps(globalIndex)} />;
                     })}
                 </div>
@@ -125,17 +140,23 @@ function Board({gameState, isMatchingBySuit, checkIfMatching}: BoardProps): JSX.
 interface CardProps {
     onClick: () => void,
     isFlipped: boolean,
-    isRemoved: boolean,
-    card: PlayingCard,
+    cardId: number,
     isPlayerTurn: boolean,
     cardIndex: number
 }
 
-export function Card({isFlipped, isRemoved, card, onClick, isPlayerTurn, cardIndex}: CardProps): JSX.Element {
+export function Card({isFlipped, cardId, onClick, isPlayerTurn, cardIndex}: CardProps): JSX.Element {
     const {gameId} = useContext(GameContext)
     const {isExternalHover, handleHoverStart, handleHoverEnd} = useExternalHoverState(gameId, cardIndex);
     const [isHover, setIsHover] = useState(false)
 
+    useEffect(() => {
+        if (isHover && !isPlayerTurn) {
+            handleHoverEnd()
+        }
+    }, [isPlayerTurn]);
+
+    const isRemoved = cardId === -1;
     if (isRemoved) {
         return <button className="card"/>
     }
@@ -163,12 +184,12 @@ export function Card({isFlipped, isRemoved, card, onClick, isPlayerTurn, cardInd
         </button>;
     }
 
-    const colorClass = card.isRed() ? "darkred-font-color" : "black-font-color";
+    const colorClass = deck[cardId].isRed() ? "darkred-font-color" : "black-font-color";
 
     return <button className={`card ${hoverStatus}`} onMouseEnter={handleOnMouseEnter}
                    onMouseLeave={handleOnMouseLeave}>
         <div className={`${colorClass}`}>
-            {card.toString()}
+            {deck[cardId].toString()}
         </div>
     </button>;
 }

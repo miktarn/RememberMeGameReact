@@ -25,7 +25,6 @@ export function CreateNewGameForm(): JSX.Element {
             cardsLayout: Array.from({length: Number(data.cardsAmount)}, () =>
                 Math.floor(Math.random() * 52)
             ),
-            removedCards: [],
             playerScore: [{name: data.nickname, score: 0}],
             activePlayerName: data.nickname,
             timer: Number(data.timer)

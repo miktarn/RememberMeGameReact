@@ -1,6 +1,5 @@
 export interface GameState {
     cardsLayout: Array<number>
-    removedCards: Array<number>
     playerScore: Array<Player>
     activePlayerName: string
     timer: number

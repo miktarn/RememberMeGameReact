@@ -128,6 +128,12 @@ button {
 .darkred-font-color {
     color: darkred;
 }
+
+.game-over-title {
+    color: green;
+    font-size: 16pt;
+}
+
 .not-important-button {
     background-color: grey;
     font-size: 8pt;

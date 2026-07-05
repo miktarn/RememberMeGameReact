@@ -97,6 +97,13 @@ function Board({gameState, isMatchingBySuit, checkIfMatching, isGameOver}: Board
         }
     }, [isGameOver]);
 
+    useEffect(() => {
+        if (!isGameOver) {
+            handleFlipEnd()
+            setIsLocked(false)
+        }
+    }, [gameState.activePlayerName]);
+
     function handleClick(cardIndex: number) {
         if (isLocked || !isPlayerTurn) {
             return;

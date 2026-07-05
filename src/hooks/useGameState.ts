@@ -12,7 +12,6 @@ let docRef: DocumentReference;
 const revealTimeout = 700;
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-
 function checkIfLegalMoveExist(cardsLayout: Array<number>) {
     const remainingCards = cardsLayout.filter(i => i !== -1);
     if (remainingCards.length > 4) {
@@ -39,6 +38,7 @@ export const useGameState = (currentGameId: string, playerName: string) => {
     const {clearContext} = useContext(GameContext)
     const [isGameOver, setIsGameOver] = useState<boolean>(false)
     const gameOverMessage = useMemo(() => getGameOverMessage(), [isGameOver])
+    const [canPassTurnBecauseOfTimeout, setCanPassTurnBecauseOfTimeout] = useState(true)
 
     useEffect(() => {
         if (!gameState) return
@@ -48,10 +48,12 @@ export const useGameState = (currentGameId: string, playerName: string) => {
     }, [gameState?.cardsLayout]);
 
     useEffect(() => {
-        if (seconds === 0 && gameState?.activePlayerName === playerName && gameState.playerScore.length > 1) {
-            passTurn(gameState)
+        if (canPassTurnBecauseOfTimeout) {
+            if (seconds === 0 && gameState?.activePlayerName === playerName && gameState.playerScore.length > 1) {
+                passTurn(gameState)
+            }
         }
-    }, [seconds, gameState?.playerScore.length]);
+    }, [seconds, gameState?.playerScore.length, canPassTurnBecauseOfTimeout]);
 
     useEffect(() => {
         docRef = doc(firestore, COLLECTION_PATH, currentGameId);
@@ -112,6 +114,7 @@ export const useGameState = (currentGameId: string, playerName: string) => {
 
     async function checkIfMatching(updatedFlipped: number[], isMatchingBySuit: Boolean) {
         if (!gameState) return;
+        setCanPassTurnBecauseOfTimeout(false)
         const firstCard: PlayingCard = deck[gameState.cardsLayout[updatedFlipped[0]]];
         const secondCard: PlayingCard = deck[gameState.cardsLayout[updatedFlipped[1]]];
 
@@ -122,6 +125,7 @@ export const useGameState = (currentGameId: string, playerName: string) => {
         } else {
             await processMismatch();
         }
+        setCanPassTurnBecauseOfTimeout(true)
     }
 
     function getGameOverMessage(): string {

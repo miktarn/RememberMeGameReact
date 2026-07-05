@@ -35,7 +35,6 @@ export function CreateNewGameForm(): JSX.Element {
     }
 
     return <form onSubmit={handleSubmit(processSubmitEventData)}>
-        <br/>
         <input {...register("nickname", {
             required: "Username should not be empty", maxLength: {
                 value: 14,

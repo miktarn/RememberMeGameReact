@@ -34,16 +34,11 @@ function checkIfLegalMoveExist(cardsLayout: Array<number>) {
 
 export const useGameState = (currentGameId: string, playerName: string) => {
     const [gameState, setGameState] = useState<GameState>();
-    const {seconds, resetCountdown} = useCountdown(gameState?.timer ?? 6)
+    const {seconds, resetCountdown} = useCountdown(gameState?.timer)
     const navigate = useNavigate();
     const {clearContext} = useContext(GameContext)
     const [isGameOver, setIsGameOver] = useState<boolean>(false)
     const gameOverMessage = useMemo(() => getGameOverMessage(), [isGameOver])
-
-
-    useEffect(() => {
-        resetCountdown()
-    }, [gameState?.activePlayerName]);
 
     useEffect(() => {
         if (!gameState) return
@@ -75,6 +70,7 @@ export const useGameState = (currentGameId: string, playerName: string) => {
     async function passTurn(gameState: GameState) {
         const nextActivePlayerName: string = getNextActivePlayerName(gameState.playerScore, playerName)
         await setDoc(docRef, {...gameState, activePlayerName: nextActivePlayerName})
+        resetCountdown()
     }
 
     async function handleLeave() {

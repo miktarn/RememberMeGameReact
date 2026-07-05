@@ -7,7 +7,7 @@ export default function HomePage(): JSX.Element {
     const [isJoinGameFormActive, setIsJoinGameFormActive] = useState(true)
 
     return <div className={`form centered-container`}>
-        <p><h1>This is a Home Page</h1></p>
+        <h1>This is a Home Page</h1>
 
         <div className={`centered-container`}>
             {isJoinGameFormActive ?

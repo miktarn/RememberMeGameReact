@@ -41,7 +41,6 @@ export function JoinNewGameForm(): JSX.Element {
     }
 
     return <form onSubmit={handleSubmit(onSubmit)}>
-        <br/>
         <input {...register("nickname", {
             required: "Username should not be empty", maxLength: {
                 value: 14,

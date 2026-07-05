@@ -40,7 +40,7 @@ export default function GameScreen(): JSX.Element {
                     const shouldHighlightRed: boolean = shouldBeMarkedActive && player.name === playerName
                     return (
                         <div className={`status`} key={player.name}>
-                            {player.name}: {player.score}
+                            <div className={`username`} >{player.name}</div> : {player.score}
                             {!isGameOver &&
                                 <label className={`status ${shouldHighlightRed ? 'darkred-font-color' : ''}`}>
                                     {shouldBeMarkedActive ? "<- " + seconds : ""}
@@ -79,7 +79,7 @@ function defineBoardSize(layoutSize: number): [number, number] {
     } else if (layoutSize == 40) {
         return [8, 5]
     }
-    return [12, 5]
+    return [10, 6]
 }
 
 function Board({gameState, isMatchingBySuit, checkIfMatching, isGameOver}: BoardProps): JSX.Element {

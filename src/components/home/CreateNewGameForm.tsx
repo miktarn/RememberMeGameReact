@@ -36,7 +36,12 @@ export function CreateNewGameForm(): JSX.Element {
 
     return <form onSubmit={handleSubmit(processSubmitEventData)}>
         <br/>
-        <input {...register("nickname", {required: "Username should not be empty"})} type="text"
+        <input {...register("nickname", {
+            required: "Username should not be empty", maxLength: {
+                value: 14,
+                message: "Nickname must be at most 14 characters long",
+            }
+        })} type="text"
                placeholder="Enter your nickname">
         </input><br/><br/>
         {errors.nickname && <>
@@ -56,7 +61,7 @@ export function CreateNewGameForm(): JSX.Element {
         </label><br/>
         <label>
             <input type="radio" {...register("cardsAmount")} value="60"/>
-            Enormous 12х5
+            Enormous 10х6
         </label><br/><br/>
 
         <input type="number" placeholder="Select Timer"
@@ -71,6 +76,8 @@ export function CreateNewGameForm(): JSX.Element {
         {errors.timer && <>
             <div style={{color: "red"}}>{errors.timer.message}</div>
             <br/></>}
-        <button type="submit">New Game</button>
+        <div className={`centered-container`}>
+            <button type="submit">New Game</button>
+        </div>
     </form>
 }

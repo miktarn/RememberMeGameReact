@@ -9,14 +9,14 @@ export const useCountdown = (maxAmountOfSeconds: number | undefined) => {
     const [seconds, setSeconds] = useState<number>(-1)
 
     function resetCountdown() {
-        resetTimestamp()
+        return resetTimestamp()
     }
 
     useEffect(() => {
         if (maxAmountOfSeconds) {
             setSeconds(maxAmountOfSeconds - getSecondsSince(timerLastUpdateTimestamp))
         }
-    }, [maxAmountOfSeconds]);
+    }, [maxAmountOfSeconds, timerLastUpdateTimestamp]);
 
     useEffect(() => {
         if (maxAmountOfSeconds) {
@@ -32,7 +32,6 @@ export const useCountdown = (maxAmountOfSeconds: number | undefined) => {
 
     useEffect(() => {
         if (maxAmountOfSeconds) {
-            console.log("TimerLastUpdateTimestamp updated to " + timerLastUpdateTimestamp)
             if (timerLastUpdateTimestamp > 0) {
                 setSeconds(maxAmountOfSeconds - getSecondsSince(timerLastUpdateTimestamp))
             }

@@ -100,7 +100,7 @@ export const useGameState = (currentGameId: string, playerName: string) => {
             nextCardsLayout[updatedFlipped[0]] = -1
             nextCardsLayout[updatedFlipped[1]] = -1
             await setDoc(docRef, {...gameState, cardsLayout: nextCardsLayout, playerScore: nextPlayerScore})
-            resetCountdown()
+            await resetCountdown()
         } catch (error) {
             console.error("Error during save to Firebase:", error);
         }

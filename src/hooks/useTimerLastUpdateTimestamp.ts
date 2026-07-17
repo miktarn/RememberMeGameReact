@@ -24,7 +24,7 @@ export const useTimerLastUpdateTimestamp = (currentGameId: string) => {
 
     const updateTimestamp = () => {
         const dataRef = ref(rtdb, `rooms/${currentGameId}/timer-last-update-timestamp`)
-        set(dataRef, Date.now())
+        return set(dataRef, Date.now())
     }
 
     return {timerLastUpdateTimestamp, resetTimestamp: updateTimestamp}

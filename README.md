@@ -34,7 +34,7 @@ A real-time multiplayer memory card game where players take turns finding matchi
 
 ## Screenshot
 
-![Game Screenshot](img.png)
+![Game Screenshot](src/assets/read-me-screenshot.png)
 
 ## Game Modes
 
